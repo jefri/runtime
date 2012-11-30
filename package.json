@@ -1,0 +1,41 @@
+{
+  "name": "jefri",
+  "title": "JEFRi: Entity Framework Runtime",
+  "homepage": "http://www.jefri.org",
+  "version": "1.0.0",
+  "author": {
+    "name": "David Souther",
+    "email": "<davidsouther@gmail.com>"
+  },
+  "description": "A full-featured entity framework for javascript.",
+  "contributors": [
+    {
+      "name": "Jonathan Porta",
+      "email": "jonathan@jonathanporta.com"
+    }
+  ],
+  "files": [
+    "lib/", "package.json"
+  ],
+  "main": "./lib/jefri",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DavidSouther/JEFRi.git"
+  },
+  "keywords": [
+    "ef",
+    "entity",
+    "entity framework"
+  ],
+  "dependencies": {
+    "superscore": ">=0.3.0"
+  },
+  "devDependencies": {
+    "grunt": "0.3.x",
+    "grunt-contrib": "0.2.x",
+    "grunt-livescript": "0.4.x",
+    "grunt-jasmine-node": "0.0.2",
+    "jasmine-node": "1.0.26"
+  },
+  "licenses": [{"type": "MIT"}]
+}
