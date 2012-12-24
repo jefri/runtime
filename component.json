@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "main": ["./build/dist/jefri-angular.min.js"],
   "dependencies": {
-  	"superscore": "~0.2.6"
+  	"superscore": "~0.3.2"
   }
 }
