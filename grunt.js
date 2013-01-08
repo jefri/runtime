@@ -6,7 +6,7 @@ module.exports = function(grunt) {
 			banner: '// <%= pkg.title || pkg.name %> - v<%= pkg.version %> - ' +
 				'<%= grunt.template.today("yyyy-mm-dd") %>\n' +
 				'<%= pkg.homepage ? "// " + pkg.homepage + "\n" : "" %>' +
-				'// Copyright (c) <%= grunt.template.today("yyyy") %> <%= pkg.author.name %>;' +
+				'// Copyright (c) 2012 - <%= grunt.template.today("yyyy") %> <%= pkg.author.name %>;' +
 				' Licensed <%= _.pluck(pkg.licenses, "type").join(", ") %>'
 		},
 		clean: {
@@ -21,7 +21,8 @@ module.exports = function(grunt) {
 					"dist/compiled/Transaction.js": 'src/Transaction.ls',
 				},
 				options: {
-					bare: true
+					bare: true,
+					util: true
 				}
 			},
 			nunit: {
