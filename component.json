@@ -1,7 +1,0 @@
-{
-  "name": "jefri",
-  "version": "1.0.3",
-  "dependencies": {
-  	"superscore": "~0.3.3"
-  }
-}

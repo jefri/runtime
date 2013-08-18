@@ -8,13 +8,13 @@
 	# ### Transaction
 	# Object to handle transactions.
 	JEFRi.Transaction = (spec, store) ->
-		@ <<<
+		_(@).extend
 			attributes: {}
 			store: store
 			entities: if (spec instanceof Array) then spec else (if spec then [spec] else [])
 
 	# ### Prototype
-	JEFRi.Transaction:: <<<
+	_(JEFRi.Transaction::).extend
 		# ### encode
 		encode: ->
 			transaction =
@@ -22,36 +22,36 @@
 				entities: []
 
 			for entity in @entities
-				transaction.entities.push if _.isEntity(entity) then entity._encode! else entity
+				transaction.entities.push if _.isEntity(entity) then entity._encode() else entity
 
 			transaction
 			
 		# ### toString
 		toString: ->
-			return JSON.stringify @encode!
+			return JSON.stringify @encode()
 
 		# ### get*([store])*
 		# Execute the transaction as a GET request
 		get: (store) ->
-			d = new _.Deferred!
-			@getting <: {}
+			d = new _.Deferred()
+			@.trigger "getting", {}
 
 			store = store || @store
 			store.execute 'get', @ .then !->
 				d.resolve @
-			.promise!
+			.promise()
 
 		# ### persist*([store])*
 		# Execute the transaction as a POST request
 		persist: (store) ->
-			d = _.Deferred!
+			d = _.Deferred()
 			store = store || @store
-			@persisting <: {}
-			@persisted <: (e, data) ->
+			@.trigger "persisting", {}
+			@.trigger "persisted", (e, data) ->
 			store.execute 'persist', @ .then !(t)->
 				for entity in t.entities
-					entity.persisted <: {}
-			.promise!
+					entity.trigger "persisted", {}
+			.promise()
 
 		# ### add*(spec...)*
 		# Add several entities to the transaction
@@ -71,5 +71,5 @@
 		# ### attributes*(attributes)*
 		# Set several attributes on the transaction
 		attributes: (attributes) ->
-			@attributes <<< attributes
+			_(@attributes).extend attributes
 			@
