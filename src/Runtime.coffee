@@ -155,7 +155,7 @@
 
 		# Set up all the required methods - id!, _type!, and the mutaccs.
 		_build_prototype = (type, definition, proto) =>
-			_(definition.Constructor::).extend EventDispatcher::,
+			_(definition.Constructor::).extend JEFRi.EventDispatcher::,
 				# Get this entity's type. Use the closure'd reference.
 				_type: (full) ->
 					full = full || false

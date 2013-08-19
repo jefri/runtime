@@ -52,9 +52,9 @@ module.exports = (grunt) ->
 				src: [
 					"<banner:meta.banner>"
 					"src/node/pre.js"
-					"dist/compiled/EventDispatcher.js"
 					"dist/compiled/Runtime.js"
 					"dist/compiled/Transaction.js"
+					"dist/compiled/EventDispatcher.js"
 					"src/node/post.js"
 				]
 				dest: "lib/<%= pkg.name %>.js"
@@ -64,9 +64,9 @@ module.exports = (grunt) ->
 					"<banner:meta.banner>"
 					"dist/compiled/request.js"
 					"src/min/pre.js"
-					"dist/compiled/EventDispatcher.js"
 					"dist/compiled/Runtime.js"
 					"dist/compiled/Transaction.js"
+					"dist/compiled/EventDispatcher.js"
 					"src/min/post.js"
 				]
 				dest: "dist/<%= pkg.name %>.min.js"
@@ -133,5 +133,5 @@ module.exports = (grunt) ->
 	grunt.registerTask "test_nunit", ["coffee:nunit", "nodeunit"]
 	grunt.registerTask "test_jasmine", ["coffee:jasmine", "jasmine_node"]
 	grunt.registerTask "test_qunit", ["coffee:qunit", "qunit:min"]
-	grunt.registerTask "test", ["test_nunit", "test_jasmine", "test_qunit"]
+	grunt.registerTask "test", ["connect:testing", "test_nunit", "test_jasmine", "test_qunit"]
 	grunt.registerTask "default", ["clean", "build", "test"]

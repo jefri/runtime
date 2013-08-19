@@ -1,5 +1,5 @@
-EventDispatcher = ->
-EventDispatcher:: =
+JEFRi.EventDispatcher = ->
+JEFRi.EventDispatcher:: =
 	# constructor: EventDispatcher
 	on: (event, fn)->
 		@_listeners = {}  if @_listeners is `undefined`
