@@ -37,9 +37,9 @@
 			@.trigger "getting", {}
 
 			store = store || @store
-			store.execute 'get', @ .then !->
+			store.execute('get', @).then ->
 				d.resolve @
-			.promise()
+			.promise
 
 		# ### persist*([store])*
 		# Execute the transaction as a POST request
@@ -47,11 +47,10 @@
 			d = _.Deferred()
 			store = store || @store
 			@.trigger "persisting", {}
-			@.trigger "persisted", (e, data) ->
-			store.execute 'persist', @ .then !(t)->
+			store.execute('persist', @).then (t)=>
 				for entity in t.entities
 					entity.trigger "persisted", {}
-			.promise()
+			.promise
 
 		# ### add*(spec...)*
 		# Add several entities to the transaction

@@ -197,7 +197,7 @@
 
 					#Add all the properties to the writer.
 					for prop of definition.properties
-						min[prop] = @[prop]()
+						min[prop] = @[prop]
 
 					# Don't add relationships. Any walker will be responsible for adding only the entities they need.
 					min
