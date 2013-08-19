@@ -16,9 +16,34 @@
 			return cmp
 
 		#Duck type check if an object is an entity.
-		isEntity: (obj)->
+		isEntity: (obj) ->
 			return obj._type and obj.id and
 				_.isFunction(obj._type) and _.isFunction(obj.id)
+
+	EntityArray = (@entity, @field, @relationship)->
+	EntityArray:: = Object.create Array::
+	EntityArray::remove = (entity)->
+		return if entity is null
+		i = @length - 1
+		while i > - 1
+			if @[i]._compare entity
+				if @relationship.back
+					e = @[i]
+					try
+						e[@relationship.back].remove @
+					catch
+						e[@relationship.back] = null
+				@splice i, 1
+			i--
+		@
+	EntityArray::add = (entity)->
+		if not _(@entity._relationships[@field]).find _.bind(JEFRi.EntityComparator, null, entity)
+			#There is not a local reference to the found entity.
+			@entity._relationships[@field].push entity
+
+			#Call the reverse setter
+			entity[@relationship.back] = @entity if @relationship.back
+		@entity
 
 	# Add isEntity to the underscore function.
 	_.mixin isEntity: JEFRi.isEntity
@@ -75,7 +100,7 @@
 		# storage. Also builds constructors and prototypes for the context.
 		_set_context = (context, protos) =>
 			# Save the attributes
-			_(@_context.attributes).extend (context.attributes || {})
+			_(@_context.attributes).extend (context.attributes || {} )
 
 			# Prepare each entity. Uses _.each to put (definition, type) in a closure.
 			# _.each context.entities, (definition, type) => # NO SERIOUSLY, definition MUST BE IN A CLOSURE!
@@ -108,7 +133,7 @@
 				for name, property of definition.properties
 					# Use the value provided to the constructor, or the default.
 					def = proto[name] || _default(property.type)
-					@[name](def)
+					@[name] = def
 
 				# Attach a privileged copy of the full id, more for debugging than use.
 				@_id = @id true
@@ -126,7 +151,7 @@
 				return @
 
 			#Set up the prototype for any of this entity.
-			_build_prototype(type, definition, (protos && protos[type]))
+			_build_prototype(type, definition, (protos && protos[type]) )
 
 		# Set up all the required methods - id!, _type!, and the mutaccs.
 		_build_prototype = (type, definition, proto) =>
@@ -138,7 +163,7 @@
 
 				# Get this entity's ID.
 				id: (full) ->
-					"#{if full then "#{@_type()}/" else ""}#{@[definition.key]()}"
+					"#{if full then "#{@_type()}/" else ""}#{@[definition.key]}"
 
 				# Find the status of an entity.
 				_status: ->
@@ -168,7 +193,7 @@
 
 				# Encode returns the bare object.
 				_encode: ->
-					min = {_type: @_type(), _id: @id()}
+					min = {_type: @_type(), _id: @id() }
 
 					#Add all the properties to the writer.
 					for prop of definition.properties
@@ -181,13 +206,16 @@
 				# Remove it from all relationships, invalidate the ID.
 				_destroy: _.lock ->
 					@trigger "destroying", {}
-					for rel_name of definition.relationships
-						@[rel_name]?.remove.call @
+					for name, rel of definition.relationships
+						if rel.type is "has_many"
+							@[name].remove @
+						else
+							@[name] = null
 					ec.destroy @
-					@[definition.key] 0
+					@[definition.key] = 0
 					@trigger "destroyed", {}
 
-				_compare: (b)->
+				_compare: (b) ->
 					JEFRi.EntityComparator @, b
 
 			# Alias _encode as toJSON for ES5 JSON.stringify()
@@ -205,23 +233,12 @@
 				_build_method definition, method, func
 
 			# Add any additional prototypes functions
-			if (proto) then _(definition.Constructor::).extend proto::
+			if proto then _(definition.Constructor::).extend proto::
 
 		# Prepare a mutacc for a specific property.
 		# The property mutacc must handle entity accounting details.
 		_build_mutacc = (definition, field, property) =>
-			# Each field name is its own function combining getters and setters, depending on arguments.
-			definition.Constructor::[field] = (value) ->
-				# Overloaded getter and setter.
-				if arguments.length > 0
-					# Value is defined, so this is a setter
-					@[field].set.call(@, value)
-				else
-					# Just a getter.
-					@[field].get.call(@)
-
-			# Add the actual getters and setters to the new field
-			_(definition.Constructor::[field]).extend
+			Object.defineProperty definition.Constructor::, field,
 				# The setter has some accounting details to handle
 				set: (value) ->
 					# Only actually update it if it is a new value.
@@ -249,114 +266,90 @@
 		# Attach the mutators and accessors (mutaccs) to the prototype.
 		#/* TODO Thoroughly debug these functions... */
 		_build_relationship = (definition, field, relationship) ->
-			# The relationship is the name of a function that acts as getter/setter
-			definition.Constructor::[field] = (entity) ->
-				# Use arguments, since we might have a few things coming.
-				if arguments.length > 0
-					if arguments[0] is null
-						return @[field].remove.call @, arguments[0]
-					if relationship.type is "has_many"
-						return @[field].add.apply(@, _.flatten arguments)
-					else
-						return @[field].set.call @, arguments[0]
-				else
-					return @[field].get.call @
-
-			# The multiple relations functions.
-			if "has_many" is relationship.type
-				_(definition.Constructor::[field]).extend
+			access =
+				# The multiple relations functions.
+				if "has_many" is relationship.type
 					# Return the set of entities in the relationship.
 					get: ->
 						# Check if the field has ever been set
 						if not (field of @_relationships)
 							# The field hasn't been set, so we haven't ever gotten this relationship before.
+							@_relationships[field] = new EntityArray @, field, relationship
 							# We'll need to go through and fix that.
 							# We'll need to grab everything who points to us...
-							@_relationships[field] = []
 							# Loop over every entity this relationship could point to
 							for id, type of ec._instances[relationship.to.type]
 								# If these are related
-								if (type[relationship.to.property]() is @[relationship.property]())
+								if type[relationship.to.property] is @[relationship.property]
 									# Add it
-									@_relationships[field].push type
+									@_relationships[field].add type
 						@_relationships[field]
 
 					# Add an entity to the relationship.
-					add: (relations...) ->
-						if (field of @_relationships)
-							#Lazy load
-							@[field].get.call @
-						else
-							@_relationships[field] = []
-
+					set: (relations...) ->
+						relations = _(relations).flatten()
+						# Lazy load
+						@[field]
 						for entity in relations
-							if not _(@_relationships[field]).find _.bind(JEFRi.EntityComparator, null, entity)
-								#There is not a local reference to the found entity.
-								@_relationships[field].push entity
-
-								#Call the reverse setter
-								if relationship.back then entity[relationship.back] @
+							#There is not a local reference to the found entity.
+							@_relationships[field].add entity
 
 						# Notify observers
 						@.trigger "modified", [field, arguments]
 						@
-
-					remove: (related)->
-						@_relationships[field] = _(@_relationships[field]).reject((it)->related._compare(it))
-						@
-
-			# Mutaccs for has_a and is_a
-			else
-				_(definition.Constructor::[field]).extend
+				else
 					set: _.lock (related) ->
-						@_relationships[field] = related
-						resolve_ids.call @, related
-						if "is_a" isnt relationship.type
-							if relationship.back then related?[relationship.back] @
-						# Notify observers
-						@.trigger "modified", [field, related]
-						@
-
-					remove: _.lock ->
-						if "is_a" isnt relationship.type
-							if relationship.back
-								@_relationships[field]?[relationship.back].remove.call @_relationships[field], @
-						@_relationships[field] = null
-						@[relationship.property] undefined
+						if related is null # Actually a "Remove"
+							if "is_a" isnt relationship.type
+								try
+									@_relationships[field]?[relationship.back].remove @
+								catch
+									@_relationships[field]?[relationship.back] = null
+							@_relationships[field] = null
+							@[relationship.property] = undefined
+						else # A set
+							@_relationships[field] = related
+							resolve_ids.call @, related
+							if "is_a" isnt relationship.type
+								if relationship.back then related?[relationship.back] = @
+							# Notify observers
+							@.trigger "modified", [field, related]
 						@
 
 					get: ->
 						if @_relationships[field] is undefined
 							# Just need the one...
-							@_relationships[field] = ec._instances[relationship.to.type][@[relationship.property]()]
+							@_relationships[field] = ec._instances[relationship.to.type][@[relationship.property]]
 							# Make sure we found one
 							if @_relationships[field] is undefined
 								# If not, create it.
 								key = {}
-								key[relationship.to.property] = @[relationship.property]()
-								@[field](ec.build(relationship.to.type, key))
+								key[relationship.to.property] = @[relationship.property]
+								@[field] = ec.build(relationship.to.type, key)
 
 						return @_relationships[field]
+
+			Object.defineProperty definition.Constructor::, field, access
 
 			# Helper for has_a::set
 			resolve_ids = (related) ->
 				# If related is undefined, unset the property
 				if related is undefined
-					@[relationship.property] undefined
+					@[relationship.property] = undefined
 				# If @'s key is relprop, use it for related
 				else if definition.key is relationship.property # Always use this' ID if we can
-					related[relationship.to.property] @[relationship.property]()
+					related[relationship.to.property] = @[relationship.property]
 				else if related._definition().key is relationship.to.property # Back-up ID
-					@[relationship.property] related[relationship.to.property]()
+					@[relationship.property] = related[relationship.to.property]
 				else # No IDs. If one is set, set the other to that
-					if @[relationship.property]().match _.UUID.rvalid
-						related[relationship.to.property] @[relationship.property]()
-					else if related[relationship.to.property]().match _.UUID.rvalid
-						@[relationship.property] related[relationship.to.property]()
+					if @[relationship.property].match _.UUID.rvalid
+						related[relationship.to.property] = @[relationship.property]
+					else if related[relationship.to.property].match _.UUID.rvalid
+						@[relationship.property] = related[relationship.to.property]
 					else #Nothing is set, use this' id
 						id = _.UUID.v4()
-						@[relationship.property] id
-						related[relationship.to.property] id
+						@[relationship.property] = id
+						related[relationship.to.property] = id
 
 		_build_method = (definition, method, func) ->
 			func =
@@ -371,14 +364,14 @@
 				fn = _.noop
 			definition.Constructor::[method] = fn
 
-		@load = (contextUri, prototypes)->
+		@load = (contextUri, prototypes) ->
 			Request(contextUri)
-			.then (data)->
+			.then (data) ->
 				data = data || "{}"
 				data = if _.isString(data) then JSON.parse(data) else data
 				_set_context data, prototypes
 				ready.resolve()
-			.catch (e)->
+			.catch (e) ->
 				ready.reject e
 			.done()
 
@@ -406,7 +399,7 @@
 			@
 
 		# Get the definition of an entity type.
-		definition: (name) ->
+		definition: (name)->
 			name = name._type?() || name
 			@_context.entities[name]
 
@@ -418,8 +411,8 @@
 			@
 
 		# Return the canonical memory reference of the entity.
-		intern: (entity, updateOnIntern) ->
-			updateOnIntern = !!updateOnIntern || @settings.updateOnIntern
+		intern: (entity, updateOnIntern = false) ->
+			updateOnIntern = updateOnIntern || @settings.updateOnIntern
 
 			if (entity.length && ! entity._type)
 				#Array-like
@@ -429,14 +422,14 @@
 
 			if (updateOnIntern)
 				#Merge the given entity into the stored entity.
-				ret = @_instances[entity._type()][entity.id()] || entity
+				ret = @_instances[entity._type() ][entity.id() ] || entity
 				_(ret._fields).extend entity._fields
 			else
 				#Take the stored one if possible, otherwise use the given entity.
-				ret = @_instances[entity._type()][entity.id()] || entity
+				ret = @_instances[entity._type() ][entity.id() ] || entity
 
 			#Update the saved entity
-			@_instances[entity._type()][entity.id()] = ret
+			@_instances[entity._type() ][entity.id() ] = ret
 			ret
 
 		# Return a new instance of an object described in the context.
@@ -458,7 +451,7 @@
 					instance = instance[0]
 					_(instance._fields).extend r._fields
 					return instance
-			@_instances[type][r.id()] = r
+			@_instances[type][r.id() ] = r
 			return r
 
 		# Expand and intern a transaction.
@@ -476,8 +469,8 @@
 			transaction.entities = built
 
 		# Completely remove an entity from this runtime
-		destroy: (entity)->
-			delete @_instances[entity._type()][entity.id()]
+		destroy: (entity) ->
+			delete @_instances[entity._type() ][entity.id() ]
 			@
 
 		# Return an interned entity from the local instance matching spec.

@@ -98,14 +98,23 @@ module.exports = (grunt) ->
 				options:
 					urls: ["http://localhost:8000/test/qunit/min/qunit.html"]
 
-		# watch:
-		# 	lib:
-		# 		files: "<%= jshint.lib.src %>"
-		# 		tasks: ["jshint:lib", "nodeunit"]
+		watch:
+			app:
+				files: [
+					"src/EventDispatcher.coffee"
+					"src/Runtime.coffee"
+					"src/Transaction.coffee"
+					"src/min/request.coffee"
+				]
+				tasks: ["default"]
 
-		# 	test:
-		# 		files: "<%= jshint.test.src %>"
-		# 		tasks: ["jshint:test", "nodeunit"]
+			tests:
+				files: [
+					"test/nunit/*coffee"
+					"test/spec/node/coffee/*coffee"
+					"test/qunit/min/coffee/*coffee"
+				]
+				tasks: ["test"]
 
 	
 	# These plugins provide necessary tasks.

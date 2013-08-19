@@ -18,9 +18,9 @@ describe "JEFRi", (a)->
 				"name": "Host"
 				"key": "host_id"
 
-			context.entities [host, router]
+			context.entities = [host, router]
 			
-			router.properties [
+			router.properties = [
 				runtime.build "Property",
 					name: "router_id"
 					type: "string"
@@ -34,10 +34,10 @@ describe "JEFRi", (a)->
 				type: "has_many"
 				to_property: "router_id"
 				from_property: "router_id"
-			router_hosts.to host
-			router_hosts.from router
+			router_hosts.to = host
+			router_hosts.from = router
 
-			host.properties [
+			host.properties = [
 				runtime.build "Property",
 					name: "host_id",
 					type: "string"
@@ -60,8 +60,8 @@ describe "JEFRi", (a)->
 				type: "has_a"
 				to_property: "router_id"
 				from_property: "router_id"
-			host_router.to router
-			host_router.from host
+			host_router.to = router
+			host_router.from = host
 
 			loaded = true
 		waitsFor -> loaded

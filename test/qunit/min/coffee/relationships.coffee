@@ -47,10 +47,10 @@ asyncTest "has_a/has_a set", ->
 		fid = foo.id(true)
 		bar = runtime.build("Bar")
 		bid = bar.id(true)
-		foo.bar bar
+		foo.bar = bar
 		equal fid, foo.id(true), "Anchor kept id."
 		equal bid, bar.id(true), "Related kept id."
-		equal foo.bar_id(), bar.foo_id(), "Anchor rel prop is Related rel prop."
+		equal foo.bar_id, bar.foo_id, "Anchor rel prop is Related rel prop."
 		ok foo._relationships.bar is bar, "Anchor points to correct related."
 		ok bar._relationships.foo is foo, "Related points to correct anchor."
 		start()
@@ -99,10 +99,10 @@ asyncTest "has_a/has_a (key relationship) set", ->
 		bar = runtime.build "Bar",
 			foo_id: foo.id()
 		bid = bar.id(true)
-		foo.bar bar
+		foo.bar = bar
 		equal fid, foo.id(true), "Anchor kept id."
 		equal bid, bar.id(true), "Related kept id."
-		equal foo.foo_id(), bar.foo_id(), "Anchor rel prop is Related rel prop."
+		equal foo.foo_id, bar.foo_id, "Anchor rel prop is Related rel prop."
 		ok foo._relationships.bar is bar, "Anchor points to correct related."
 		ok bar._relationships.foo is foo, "Related points to correct anchor."
 		start()

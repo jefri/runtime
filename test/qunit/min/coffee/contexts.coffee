@@ -10,18 +10,17 @@ asyncTest "Relationships", ->
 			name: "Host"
 			key: "host_id"
 
-		router.properties [runtime.build "Property",
+		router.properties = runtime.build "Property",
 			name: "router_id"
 			type: "string"
-		]
 		routerHosts = runtime.build "Relationship",
 			name: "hosts"
 			type: "has_many"
 			to_property: "router_id"
 			from_property: "router_id"
-		routerHosts.to host
-		routerHosts.from router
-		host.properties [
+		routerHosts.to = host
+		routerHosts.from = router
+		host.properties = [
 			runtime.build "Property",
 				name: "host_id"
 				type: "string"
@@ -35,14 +34,14 @@ asyncTest "Relationships", ->
 			to_property: "router_id"
 			from_property: "router_id"
 
-		hostRouter.to router
-		hostRouter.from host
-		context.entities [host, router]
+		hostRouter.to = router
+		hostRouter.from = host
+		context.entities = [host, router]
 
-		equal router.relationships().length, 1, "Router has correct relationships."
-		equal hostRouter.to().name(), router.name(), "hostRouter is to router."
-		equal hostRouter.to()._id, router._id, "hostRouter is to router."
-		equal routerHosts.to().name(), host.name(), "routerHosts is to host."
-		equal routerHosts.to()._id, host._id, "routerHosts is to host."
+		equal router.relationships.length, 1, "Router has correct relationships."
+		equal hostRouter.to.name, router.name, "hostRouter is to router."
+		equal hostRouter.to._id, router._id, "hostRouter is to router."
+		equal routerHosts.to.name, host.name, "routerHosts is to host."
+		equal routerHosts.to._id, host._id, "routerHosts is to host."
 
 		start()

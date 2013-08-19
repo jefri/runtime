@@ -11,8 +11,8 @@ asyncTest "Transaction Basics", ->
 			name: "southerd"
 			address: "davidsouther@gmail.com"
 
-		user.authinfo runtime.build "Authinfo", {}
-		authinfo = user.authinfo()
+		user.authinfo = runtime.build "Authinfo", {}
+		authinfo = user.authinfo
 		transaction = new JEFRi.Transaction()
 		transaction.add user, authinfo
 		equal transaction.entities.length, 2, "Has both entities."

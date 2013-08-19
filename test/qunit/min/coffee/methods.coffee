@@ -25,7 +25,7 @@ asyncTest "Basic methods", ->
               sum:
                 return: "number"
                 definitions:
-                  javascript: "return this.a() + this.b();"
+                  javascript: "return this.a + this.b;"
 
               scale:
                 return: "number"
@@ -35,7 +35,7 @@ asyncTest "Basic methods", ->
 
                 order: ["s"]
                 definitions:
-                  javascript: "var a = this.a(); var r = a * s; return r;"
+                  javascript: "var a = this.a; var r = a * s; return r;"
   runtime.ready.done ->
     ok runtime._instances.Foo, "Runtime instantiated."
     foo = runtime.build "Foo",
