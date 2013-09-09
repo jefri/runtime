@@ -16,9 +16,9 @@
 			return cmp
 
 		#Duck type check if an object is an entity.
-		isEntity: (obj) ->
+		isEntity: (obj = {}) ->
 			return obj._type and obj.id and
-				_.isFunction(obj._type) and _.isFunction(obj.id)
+				_.isFunction(obj._type) and _.isFunction(obj.id) or false
 
 	EntityArray = (@entity, @field, @relationship)->
 	EntityArray:: = Object.create Array::

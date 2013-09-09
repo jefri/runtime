@@ -78,6 +78,10 @@ asyncTest "Runtime Features", ->
 		ok _(user).isEntity(), "isEntity checks correctly."
 		start()
 
+test "isEntity", ->
+	[null, undefined, "", 'foo', 123, 45.67].forEach (e)->
+		equal _(e).isEntity(), false, "'#{e}' is not an entity"
+
 
 test "Transaction Prototype", ->
 	ok JEFRi.Transaction, "JEFRi Transaction is available."
