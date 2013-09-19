@@ -79,6 +79,15 @@ module.exports = (grunt) ->
 				]
 				dest: "lib/<%= pkg.name %>.min.js"
 
+		copy:
+			dist:
+				src: [
+					"<banner:meta.banner>"
+					"dist/<%= pkg.name %>.min.js"
+				]
+				dest: "lib/<%= pkg.name %>.min.js"
+
+
 		nodeunit:
 			files: ["test/nunit/built/*js"]
 
@@ -87,11 +96,11 @@ module.exports = (grunt) ->
 				root: '.'
 				port: 8000
 
-		jasmine_node:
-			projectRoot: "test/spec/node"
-			specFolderName: "spec"
-			match: ""
-			matchall: true
+		mochaTest:
+			runtime:
+				src: ["test/spec/node/**/*.coffee"]
+				options:
+					reporter: 'nyan'
 
 		qunit:
 			min:
@@ -118,7 +127,7 @@ module.exports = (grunt) ->
 
 	
 	# These plugins provide necessary tasks.
-	grunt.loadNpmTasks "grunt-jasmine-node"
+	grunt.loadNpmTasks "grunt-mocha-test"
 	grunt.loadNpmTasks "grunt-contrib-watch"
 	grunt.loadNpmTasks "grunt-contrib-qunit"
 	grunt.loadNpmTasks "grunt-contrib-nodeunit"
@@ -127,11 +136,14 @@ module.exports = (grunt) ->
 	grunt.loadNpmTasks "grunt-contrib-connect"
 	grunt.loadNpmTasks "grunt-contrib-concat"
 	grunt.loadNpmTasks "grunt-contrib-clean"
+	grunt.loadNpmTasks "grunt-contrib-copy"
 
 	# Default task.
-	grunt.registerTask "build", ["coffee:app", "concat:node", "concat:min", "uglify:dist"]
+	# grunt.registerTask "distribute", ["uglify:dist"]
+	grunt.registerTask "distribute", ["copy:dist"]
+	grunt.registerTask "build", ["coffee:app", "concat:node", "concat:min", "distribute"]
 	grunt.registerTask "test_nunit", ["coffee:nunit", "nodeunit"]
-	grunt.registerTask "test_jasmine", ["coffee:jasmine", "jasmine_node"]
+	grunt.registerTask "test_jasmine", ["mochaTest:runtime"]
 	grunt.registerTask "test_qunit", ["coffee:qunit", "qunit:min"]
 	grunt.registerTask "test", ["connect:testing", "test_nunit", "test_jasmine", "test_qunit"]
 	grunt.registerTask "default", ["clean", "build", "test"]

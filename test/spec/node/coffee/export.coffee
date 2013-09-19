@@ -1,11 +1,11 @@
-describe "JEFRi", (a)->
+should = require "should"
+describe "JEFRi", ->
 	jefri = require "../../../../lib/jefri"
 	_ = require "superscore"
 
-	context = runtime = null
-	loaded = done = false
+	context = null
 
-	beforeEach ->
+	beforeEach (done)->
 		runtime = new jefri.Runtime "http://localhost:8000/context.json"
 		runtime.ready.then (a)->
 			context = runtime.build "Context", name: "network"
@@ -19,6 +19,7 @@ describe "JEFRi", (a)->
 				"key": "host_id"
 
 			context.entities = [host, router]
+
 			
 			router.properties = [
 				runtime.build "Property",
@@ -28,6 +29,8 @@ describe "JEFRi", (a)->
 					name: "name"
 					type: "string"
 			]
+
+			console.log context
 
 			router_hosts = runtime.build "Relationship",
 				name: "hosts"
@@ -63,22 +66,18 @@ describe "JEFRi", (a)->
 			host_router.to = router
 			host_router.from = host
 
-			loaded = true
-		waitsFor -> loaded
+			done()
 
-	afterEach ->
-		waitsFor -> done
-		runs -> loaded = done = false
+	it "exports", (done)->
+		context.should.have.property 'export'
+		stringContext = context.export()
+		stringContext.length.should.be.greaterThan 0
+		contextContent = JSON.parse stringContext
 
-	it "exports", ->
-		runs ->
-			debugger
-			expect(context.export) .toBeDefined()
-			stringContext = context.export()
-			expect(stringContext.length) .toBeGreaterThan 0
-			contextContent = JSON.parse stringContext
-			expect(_(contextContent.entities).keys().length) .toBe 2
-			expect(contextContent.entities.Router.key) .toBe "router_id"
-			expect(contextContent.entities.Host.relationships.router.to.type) .toBe "Router"
-			console.log stringContext
-			done = true
+		console.log _(contextContent.entities).keys()
+
+		_(contextContent.entities).keys().length.should.equal 2
+		contextContent.entities.Router.key.should.equal "router_id"
+		contextContent.entities.Host.relationships.router.to.type.should.equal "Router"
+		console.log stringContext
+		done()
