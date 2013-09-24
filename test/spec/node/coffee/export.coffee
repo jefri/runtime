@@ -30,8 +30,6 @@ describe "JEFRi", ->
 					type: "string"
 			]
 
-			console.log context
-
 			router_hosts = runtime.build "Relationship",
 				name: "hosts"
 				type: "has_many"
@@ -74,10 +72,8 @@ describe "JEFRi", ->
 		stringContext.length.should.be.greaterThan 0
 		contextContent = JSON.parse stringContext
 
-		console.log _(contextContent.entities).keys()
-
 		_(contextContent.entities).keys().length.should.equal 2
 		contextContent.entities.Router.key.should.equal "router_id"
 		contextContent.entities.Host.relationships.router.to.type.should.equal "Router"
-		console.log stringContext
+
 		done()
