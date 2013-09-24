@@ -148,6 +148,7 @@
 						_new: false
 						_modified:
 							_count: 0
+
 				return @
 
 			#Set up the prototype for any of this entity.
@@ -269,6 +270,8 @@
 			access =
 				# The multiple relations functions.
 				if "has_many" is relationship.type
+					enumerable: true
+					configurable: false
 					# Return the set of entities in the relationship.
 					get: ->
 						# Check if the field has ever been set
@@ -294,6 +297,7 @@
 							#There is not a local reference to the found entity.
 							@_relationships[field].add entity
 
+						@_modified._count += 1
 						# Notify observers
 						@.trigger "modified", [field, arguments]
 						@
@@ -312,8 +316,9 @@
 							resolve_ids.call @, related
 							if "is_a" isnt relationship.type
 								if relationship.back then related?[relationship.back] = @
-							# Notify observers
-							@.trigger "modified", [field, related]
+						# Notify observers
+						@_modified._count += 1
+						@.trigger "modified", [field, related]
 						@
 
 					get: ->
@@ -372,6 +377,7 @@
 				_set_context data, prototypes
 				ready.resolve()
 			.catch (e) ->
+				console.warn e, e.message
 				ready.reject e
 			.done()
 
