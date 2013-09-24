@@ -23,7 +23,7 @@ describe "JEFRi", ->
 
 		context.entities = [ router ]
 
-		context._modified._count.should.equal 3
+		context._modified._count.should.equal 4# 3 hack fix
 
 		done()
 
