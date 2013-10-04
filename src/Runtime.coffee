@@ -310,7 +310,7 @@
 								catch
 									@_relationships[field]?[relationship.back] = null
 							@_relationships[field] = null
-							@[relationship.property] = undefined
+							@[relationship.property] = null
 						else # A set
 							@_relationships[field] = related
 							resolve_ids.call @, related
