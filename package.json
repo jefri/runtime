@@ -1,7 +1,7 @@
 {
   "name": "jefri",
   "title": "JEFRi: Entity Framework Runtime",
-  "version": "1.1.1-RC2",
+  "version": "1.1.1-RC3",
   "description": "A full-featured entity framework for javascript.",
   "homepage": "http://www.jefri.org",
   "bugs": "https://github.com/jefri/jefri-runtime/issues",
