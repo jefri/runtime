@@ -65,7 +65,6 @@ asyncTest "Instantiate Runtime", ->
 
 		start()
 
-
 asyncTest "Runtime Features", ->
 	expect 2
 	runtime = new JEFRi.Runtime "/test/qunit/min/context/user.json",
