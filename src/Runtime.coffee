@@ -144,10 +144,8 @@
 				# Set a few event handlers
 				# Manage accounting after an entity has been persisted
 				@.on "persisted", ->
-					_(@).extend
-						_new: false
-						_modified:
-							_count: 0
+					@_new = false
+					@_modified = {_count: 0}
 
 				return @
 
@@ -171,7 +169,7 @@
 					state = "MODIFIED"
 					if @_new
 						state = "NEW"
-					else if _.isEmpty @_modified
+					else if @_modified._count is 0
 						state = "PERSISTED"
 					state
 
@@ -468,9 +466,11 @@
 			for entity in transaction.entities || []
 				e = @build(entity._type, entity)
 				e = @intern(e, true)
-				#Make the entity not new...
-				e.trigger action, true
 				built.push(e)
+
+			# Trigger events on all entities
+			for e in built
+				e.trigger action, true
 
 			transaction.entities = built
 

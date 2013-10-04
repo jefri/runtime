@@ -16,7 +16,7 @@ JEFRi.EventDispatcher:: =
 	trigger: (event, args)->
 		return  if @_listeners is `undefined`
 		listeners = @_listeners
-		listenerArray = listeners[event.event]
+		listenerArray = listeners[event]
 		if listenerArray isnt `undefined`
 			event.target = this
 			listener.call this, event for listener in listenerArray
