@@ -4,3 +4,5 @@ test/qunit/min/tests.js
 test/spec/jefri/
 test/spec/node/spec/
 
+bower_components/
+node_modules/
