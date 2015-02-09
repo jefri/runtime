@@ -25,7 +25,7 @@ describe "JEFRi", ->
 		done()
 
 	it "is not new after expansion", (done)->
-		runtime.expand  {entities: [{"_type":"Context","_id":"0065ea14-36e7-4aae-9729-623740d1a240","context_id":"0065ea14-36e7-4aae-9729-623740d1a240","name":"network"}]}
+		runtime.expand	{entities: [{"_type":"Context","_id":"0065ea14-36e7-4aae-9729-623740d1a240","context_id":"0065ea14-36e7-4aae-9729-623740d1a240","name":"network"}]}
 		ct = runtime.find('Context')[0]
 		ct._status().should.equal "PERSISTED"
 

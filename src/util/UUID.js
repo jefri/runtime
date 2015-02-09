@@ -6,24 +6,24 @@ UUID.rvalid = /^\{?[0-9a-f]{8}\-?[0-9a-f]{4}\-?[0-9a-f]{4}\-?[0-9a-f]{4}\-?[0-9a
 
 var random;
 if(typeof window !== 'undefined') {
-  random = function(){
-    var array = new Uint8Array(SIZE);
-    window.crypto.getRandomValues(array);
-    return [].slice.call(array)[0];
-  }
+	random = function(){
+		var array = new Uint8Array(SIZE);
+		window.crypto.getRandomValues(array);
+		return [].slice.call(array)[0];
+	}
 } else {
-  var crypto = require('crypto');
-  random = function(){
-    // sync
-    try {
-      var buf = crypto.randomBytes(SIZE);
-      var array = new Uint8Array(buf);
-      return [].slice.call(array)[0];
-    } catch (ex) {
-      // handle error
-      // most likely, entropy sources are drained
-    }
-  }
+	var crypto = require('crypto');
+	random = function(){
+		// sync
+		try {
+			var buf = crypto.randomBytes(SIZE);
+			var array = new Uint8Array(buf);
+			return [].slice.call(array)[0];
+		} catch (ex) {
+			// handle error
+			// most likely, entropy sources are drained
+		}
+	}
 }
 
 UUID.v4 = function() {

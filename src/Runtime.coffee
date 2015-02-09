@@ -1,8 +1,8 @@
-#   JEFRi Runtime.js
-#   (c) 2011-2012 David Souther
-#   JEFRi is freely distributable under the MIT license.
-#   For all details and documentation:
-#   http://jefri.org
+#	 JEFRi Runtime.js
+#	 (c) 2011-2012 David Souther
+#	 JEFRi is freely distributable under the MIT license.
+#	 For all details and documentation:
+#	 http://jefri.org
 
 require('./util/polyfill')
 
@@ -571,7 +571,7 @@ JEFRi.Transaction:: = Object.create
 			# if not _.isEntity s
 			#	s = @store.settings.runtime.expand s
 			# TODO switch to direct lookup.
-			if yes #|| force ||  _(@entities).indexBy(JEFRi.EntityComparator s) < 0
+			if yes #|| force ||	_(@entities).indexBy(JEFRi.EntityComparator s) < 0
 				#Hasn't been added yet...
 				@entities.push s
 		return @

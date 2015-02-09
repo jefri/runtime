@@ -27,12 +27,15 @@ module.exports = (grunt) ->
 					filename: './lib/<%= pkg.name %>.js'
 				resolve:
 					extensions: ['', ".js", ".coffee"]
+					alias:
+						'request': './request/browser.coffee'
 				module:
 					loaders: [
 						{ test: /\.coffee$/, loader: 'coffee-loader' }
 					]
 					noParse: [
-						/util\//
+						/util\/UUID/,
+						/util\/request\/server/
 					]
 
 		uglify:
@@ -47,9 +50,6 @@ module.exports = (grunt) ->
 				root: '.'
 				port: 8000
 
-		nodeunit:
-			files: ["test/nunit/built/*js"]
-
 		mochaTest:
 			options:
 				# timeout: 1e6
@@ -59,10 +59,26 @@ module.exports = (grunt) ->
 			runtime:
 				src: ["test/spec/node/**/*.coffee"]
 
-		qunit:
-			min:
+		karma:
+			client:
 				options:
-					urls: ["http://localhost:8000/test/qunit/min/qunit.html"]
+					browsers: ['Chrome']
+					frameworks: [ 'mocha', 'sinon-chai' ]
+					reporters: [ 'spec', 'junit', 'coverage' ]
+					singleRun: true,
+					logLevel: 'INFO'
+					preprocessors:
+						'test/**/*.coffee': [ 'coffee' ]
+					files: [
+						'lib/jefri.js',
+						'test/spec/karma/**/*.coffee'
+					]
+					junitReporter:
+						outputFile: 'build/reports/karma.xml'
+					coverageReporter:
+						type: 'lcov'
+						dir: 'build/reports/coverage/'
+
 
 	# These plugins provide necessary tasks.
 	grunt.loadNpmTasks "grunt-mocha-test"
@@ -73,9 +89,10 @@ module.exports = (grunt) ->
 	grunt.loadNpmTasks "grunt-contrib-uglify"
 	grunt.loadNpmTasks "grunt-contrib-connect"
 	grunt.loadNpmTasks "grunt-contrib-clean"
+	grunt.loadNpmTasks "grunt-karma"
 
 	# Default task.
 	grunt.registerTask "distribute", ["uglify:dist"]
 	grunt.registerTask "build", ["webpack:jefri", "distribute"]
 	grunt.registerTask "testNode", ["connect:testing", "mochaTest:runtime"]
-	grunt.registerTask "default", ["clean", "testNode", "build", ]
+	grunt.registerTask "default", ["clean", "testNode", "build", "karma:client"]
