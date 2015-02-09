@@ -37,7 +37,11 @@
 			i--
 		@
 	EntityArray::add = (entity)->
-		if not _(@entity._relationships[@field]).find _.bind(JEFRi.EntityComparator, null, entity)
+		found = null
+		@entity._relationships[@field].forEach (other)->
+			return if found?
+			found = other if JEFRi.EntityComparator entity, other
+		unless found?
 			#There is not a local reference to the found entity.
 			@entity._relationships[@field].push entity
 
@@ -46,31 +50,35 @@
 		@entity
 
 	# Add isEntity to the underscore function.
-	_.mixin isEntity: JEFRi.isEntity
+	# _.mixin isEntity: JEFRi.isEntity
 
 	# ### Runtime Constructor
 	JEFRi.Runtime = (contextUri, options, protos) ->
-		if not @ instanceof JEFRi.Runtime then return new JEFRi.Rutime contextUri, options, protos
+		if not @ instanceof JEFRi.Runtime
+			return new JEFRi.Rutime contextUri, options, protos
 
 		# The ec reference for entity prototypes
 		ec = @
 
-		if not _.isString contextUri
+		if not toString.call(contextUri) === '[object String]'
 			protos = options
 			options = contextUri
 			contextUri = ''
 
 		# Prepare a promise for completing context loading.
-		ready = Q.defer()
+		ready = {}
+		ready.promise = new Promise (resolve, reject)->
+			ready.resolve = resolve
+			ready.reject = reject
 
 		# Fill in all the privileged properties
 		settings =
 			# If an entity already exists, does JEFRi update or replace?
 			updateOnIntern: true
 			# The constructor for the default store.
-		_(settings).extend options
+		Object.assign settings, options
 
-		_(@).extend
+		Object.assign @,
 			settings: settings
 
 			ready: ready.promise
@@ -100,7 +108,7 @@
 		# storage. Also builds constructors and prototypes for the context.
 		_set_context = (context, protos) =>
 			# Save the attributes
-			_(@_context.attributes).extend (context.attributes || {} )
+			Object.assign @_context.attributes, context.attributes or {}
 
 			# Prepare each entity. Uses _.each to put (definition, type) in a closure.
 			# _.each context.entities, (definition, type) => # NO SERIOUSLY, definition MUST BE IN A CLOSURE!
@@ -116,7 +124,7 @@
 			# Build an entity's constructor.
 			definition.Constructor = (proto) ->
 				# Set the privileged accounting and property data.
-				_(@).extend
+				Object.assign @,
 					_new: true
 					_modified: {_count: 0}
 					_fields: {}
@@ -139,7 +147,7 @@
 				@_id = @id true
 
 				# Add runtime methods
-				_(@::).extend proto::
+				Object.assign @::, proto::
 
 				# Set a few event handlers
 				# Manage accounting after an entity has been persisted
@@ -149,12 +157,14 @@
 
 				return @
 
+			definition.Constructor.name = type
+
 			#Set up the prototype for any of this entity.
 			_build_prototype(type, definition, (protos && protos[type]) )
 
 		# Set up all the required methods - id!, _type!, and the mutaccs.
 		_build_prototype = (type, definition, proto) =>
-			_(definition.Constructor::).extend JEFRi.EventDispatcher::,
+			definition.Constructor:: = Object.create Object.assign {}, JEFRi.EventDispatcher::,
 				# Get this entity's type. Use the closure'd reference.
 				_type: (full) ->
 					full = full || false
@@ -232,7 +242,7 @@
 				_build_method definition, method, func
 
 			# Add any additional prototypes functions
-			if proto then _(definition.Constructor::).extend proto::
+			if proto then Object.assign definition.Constructor::, proto::
 
 		# Prepare a mutacc for a specific property.
 		# The property mutacc must handle entity accounting details.
@@ -288,7 +298,7 @@
 
 					# Add an entity to the relationship.
 					set: (relations...) ->
-						relations = _(relations).flatten()
+						relations = relations.reduce(((a, b)->a.concat(b)), [])
 						# Lazy load
 						@[field]
 						for entity in relations
@@ -364,7 +374,7 @@
 				params.push body
 				fn = Function.apply null, params
 			else
-				fn = _.noop
+				fn = ->
 			definition.Constructor::[method] = fn
 
 		@load = (contextUri, prototypes) ->
@@ -388,15 +398,13 @@
 		@
 
 	# #### Entity Array helper
-	pushResult = (entity) ->
+	pushResult = (entity)->
 		type = entity._type()
 		if (!@[type]) then @[type] = []
 		@[type].push(entity)
 
 	# #### Runtime Prototype
-	_(JEFRi.Runtime::).extend JEFRi.Runtime::
-
-	_(JEFRi.Runtime::).extend
+	JEFRi.Runtime:: = Object.create
 		# Reset the runtime's data, maintains context definitions.
 		clear: ->
 			@_instances = {}
@@ -411,7 +419,7 @@
 		# affecting _ALL_ instances, both current and future, of type.
 		extend: (type, extend) ->
 			if (@_context.entities[type])
-				_(@_context.entities[type].Constructor::).extend extend::
+				Object.assign @_context.entities[type].Constructor::, extend::
 			@
 
 		# Return the canonical memory reference of the entity.
@@ -427,7 +435,7 @@
 			if (updateOnIntern)
 				#Merge the given entity into the stored entity.
 				ret = @_instances[entity._type() ][entity.id() ] || entity
-				_(ret._fields).extend entity._fields
+				Object.assign ret._fields, entity._fields
 			else
 				#Take the stored one if possible, otherwise use the given entity.
 				ret = @_instances[entity._type() ][entity.id() ] || entity
@@ -453,7 +461,7 @@
 				if (instance.length > 0)
 					# Local instance, extend it with the new obj and return local.
 					instance = instance[0]
-					_(instance._fields).extend r._fields
+					Object.assign instance._fields, r._fields
 					return instance
 			@_instances[type][r.id() ] = r
 			return r
