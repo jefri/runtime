@@ -1,3 +1,32 @@
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/includes
+if (![].includes) {
+  Array.prototype.includes = function(searchElement /*, fromIndex*/ ) {'use strict';
+    var O = Object(this);
+    var len = parseInt(O.length) || 0;
+    if (len === 0) {
+      return false;
+    }
+    var n = parseInt(arguments[1]) || 0;
+    var k;
+    if (n >= 0) {
+      k = n;
+    } else {
+      k = len + n;
+      if (k < 0) {k = 0;}
+    }
+    var currentElement;
+    while (k < len) {
+      currentElement = O[k];
+      if (searchElement === currentElement ||
+         (searchElement !== searchElement && currentElement !== currentElement)) {
+        return true;
+      }
+      k++;
+    }
+    return false;
+  };
+}
+
 if (!Object.assign) {
   Object.defineProperty(Object, 'assign', {
     enumerable: false,
@@ -30,24 +59,8 @@ if (!Object.assign) {
   });
 }
 
-debugger
-var R = require("request");
-var Request = function(uri, body){
-	var resolve, reject;
-	var promise = new Promise(function(_resolve, _reject){
-		resolve = _resolve;
-		reject = _reject;
-	});
-
-	cb = function(err, res, body){
-		if(err) return reject(err);
-		resolve(body, res);
-	}
-
-	options = {method: body ? "POST" : "GET"};
-	if(body) options.body = body;
-
-	R(uri, options, cb);
-
-	return promise;
+if (!Object.isString) {
+  Object.isString = function(obj){
+    return Object.toString.call(contextUri) === '[object String]';
+  }
 }

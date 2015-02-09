@@ -4,506 +4,576 @@
 #   For all details and documentation:
 #   http://jefri.org
 
-	# ## JEFRi Namespace
-	JEFRi =
-		# Compare two entities for equality. Entities are equal if they
-		# are of the same type and have equivalent IDs.
-		EntityComparator: (a, b) ->
-			cmp =
-				a and b and
-				a._type() is b._type() and
-				a.id() is b.id()
-			return cmp
+require('./util/polyfill')
+Promise = require('./util/promise')
+Request = require('superagent')
+UUID = require('./util/UUID')
 
-		# Duck type check if an object is an entity.
-		isEntity: (obj = {}) ->
-			return obj._type and obj.id and
-				_.isFunction(obj._type) and _.isFunction(obj.id) or false
+# ## JEFRi Namespace
+JEFRi = module.exports =
+	# Compare two entities for equality. Entities are equal if they
+	# are of the same type and have equivalent IDs.
+	EntityComparator: (a, b) ->
+		cmp =
+			a and b and
+			a._type() is b._type() and
+			a.id() is b.id()
+		return cmp
 
-	EntityArray = (@entity, @field, @relationship)->
-	EntityArray:: = Object.create Array::
-	EntityArray::remove = (entity)->
-		return if entity is null
-		i = @length - 1
-		while i > - 1
-			if @[i]._compare entity
-				if @relationship.back
-					e = @[i]
-					try
-						e[@relationship.back].remove @
-					catch
-						e[@relationship.back] = null
-				@splice i, 1
-			i--
-		@
-	EntityArray::add = (entity)->
-		found = null
-		@entity._relationships[@field].forEach (other)->
-			return if found?
-			found = other if JEFRi.EntityComparator entity, other
-		unless found?
-			#There is not a local reference to the found entity.
-			@entity._relationships[@field].push entity
+	# Duck type check if an object is an entity.
+	isEntity: (obj = {}) ->
+		return obj._type and obj.id and
+			_.isFunction(obj._type) and _.isFunction(obj.id) or false
 
-			#Call the reverse setter
-			entity[@relationship.back] = @entity if @relationship.back
-		@entity
+EntityArray = (@entity, @field, @relationship)->
+EntityArray:: = Object.create Array::
+EntityArray::remove = (entity)->
+	return if entity is null
+	i = @length - 1
+	while i > - 1
+		if @[i]._compare entity
+			if @relationship.back
+				e = @[i]
+				try
+					e[@relationship.back].remove @
+				catch
+					e[@relationship.back] = null
+			@splice i, 1
+		i--
+	@
+EntityArray::add = (entity)->
+	found = null
+	@entity._relationships[@field].forEach (other)->
+		return if found?
+		found = other if JEFRi.EntityComparator entity, other
+	unless found?
+		#There is not a local reference to the found entity.
+		@entity._relationships[@field].push entity
 
-	# Add isEntity to the underscore function.
-	# _.mixin isEntity: JEFRi.isEntity
+		#Call the reverse setter
+		entity[@relationship.back] = @entity if @relationship.back
+	@entity
 
-	# ### Runtime Constructor
-	JEFRi.Runtime = (contextUri, options, protos) ->
-		if not @ instanceof JEFRi.Runtime
-			return new JEFRi.Rutime contextUri, options, protos
+# Add isEntity to the underscore function.
+# _.mixin isEntity: JEFRi.isEntity
 
-		# The ec reference for entity prototypes
-		ec = @
+# ### Runtime Constructor
+JEFRi.Runtime = (contextUri, options, protos) ->
+	if not @ instanceof JEFRi.Runtime
+		return new JEFRi.Rutime contextUri, options, protos
 
-		if not toString.call(contextUri) === '[object String]'
-			protos = options
-			options = contextUri
-			contextUri = ''
+	# The ec reference for entity prototypes
+	ec = @
 
-		# Prepare a promise for completing context loading.
-		ready = {}
-		ready.promise = new Promise (resolve, reject)->
-			ready.resolve = resolve
-			ready.reject = reject
+	unless Object.isString(contextUri)
+		protos = options
+		options = contextUri
+		contextUri = ''
 
-		# Fill in all the privileged properties
-		settings =
-			# If an entity already exists, does JEFRi update or replace?
-			updateOnIntern: true
-			# The constructor for the default store.
-		Object.assign settings, options
+	# Prepare a promise for completing context loading.
+	ready = promise: Promise()
 
-		Object.assign @,
-			settings: settings
+	# Fill in all the privileged properties
+	settings =
+		# If an entity already exists, does JEFRi update or replace?
+		updateOnIntern: true
+		# The constructor for the default store.
+	Object.assign settings, options
 
-			ready: ready.promise
+	Object.assign @,
+		settings: settings
 
-			# In-memory representation of the loaded context.
-			_context:
-				meta: {}
-				contexts: {}
-				entities: {}
-				attributes: {}
+		ready: ready.promise
 
-			# In-memory store of JEFRi entities.
-			_instances: {}
+		# In-memory representation of the loaded context.
+		_context:
+			meta: {}
+			contexts: {}
+			entities: {}
+			attributes: {}
 
-		# #### Private helper functions
-		# These handle most of the heavy lifting of building Entity classes.
+		# In-memory store of JEFRi entities.
+		_instances: {}
 
-		# A few default property values.
-		_default = (type) ->
-			switch type
-				when "boolean" then false
-				when "int" or "float" then 0
-				when "string" then ""
-				else ""
+	# #### Private helper functions
+	# These handle most of the heavy lifting of building Entity classes.
 
-		# Takes a "raw" context object and orders it into the internal _context
-		# storage. Also builds constructors and prototypes for the context.
-		_set_context = (context, protos) =>
-			# Save the attributes
-			Object.assign @_context.attributes, context.attributes or {}
+	# A few default property values.
+	_default = (type) ->
+		switch type
+			when "boolean" then false
+			when "int" or "float" then 0
+			when "string" then ""
+			else ""
 
-			# Prepare each entity. Uses _.each to put (definition, type) in a closure.
-			# _.each context.entities, (definition, type) => # NO SERIOUSLY, definition MUST BE IN A CLOSURE!
-			for type, definition of context.entities
-				_build_constructor definition, type
+	# Takes a "raw" context object and orders it into the internal _context
+	# storage. Also builds constructors and prototypes for the context.
+	_set_context = (context, protos) =>
+		# Save the attributes
+		Object.assign @_context.attributes, context.attributes or {}
 
-		_build_constructor = (definition, type) =>
-			# Keep the definition locally, modifying it directly with the ctor and prototypes.
-			@_context.entities[type] = definition
-			# Ready the instances bucket
-			@_instances[type] = {}
+		# Prepare each entity. Uses _.each to put (definition, type) in a closure.
+		# _.each context.entities, (definition, type) => # NO SERIOUSLY, definition MUST BE IN A CLOSURE!
+		for type, definition of context.entities
+			_build_constructor definition, type
 
-			# Build an entity's constructor.
-			definition.Constructor = (proto) ->
-				# Set the privileged accounting and property data.
-				Object.assign @,
-					_new: true
-					_modified: {_count: 0}
-					_fields: {}
-					_relationships: {}
-					_runtime: ec
+	_build_constructor = (definition, type) =>
+		# Keep the definition locally, modifying it directly with the ctor and prototypes.
+		@_context.entities[type] = definition
+		# Ready the instances bucket
+		@_instances[type] = {}
 
-				# Check for runtime prototype override.
-				proto = proto || {}
+		# Build an entity's constructor.
+		definition.Constructor = (proto) ->
+			# Set the privileged accounting and property data.
+			Object.assign @,
+				_new: true
+				_modified: {_count: 0}
+				_fields: {}
+				_relationships: {}
+				_runtime: ec
 
-				# Set the key generate if not set by proto.
-				proto[definition.key] = proto[definition.key] || _.UUID.v4()
+			# Check for runtime prototype override.
+			proto = proto || {}
 
-				# Set a bunch of default values, so they're all available.
-				for name, property of definition.properties
-					# Use the value provided to the constructor, or the default.
-					def = proto[name] || _default(property.type)
-					@[name] = def
+			# Set the key generate if not set by proto.
+			proto[definition.key] = proto[definition.key] || UUID.v4()
 
-				# Attach a privileged copy of the full id, more for debugging than use.
-				@_id = @id true
+			# Set a bunch of default values, so they're all available.
+			for name, property of definition.properties
+				# Use the value provided to the constructor, or the default.
+				def = proto[name] || _default(property.type)
+				@[name] = def
 
-				# Add runtime methods
-				Object.assign @::, proto::
+			# Attach a privileged copy of the full id, more for debugging than use.
+			@_id = @id true
 
-				# Set a few event handlers
-				# Manage accounting after an entity has been persisted
-				@.on "persisted", ->
-					@_new = false
-					@_modified = {_count: 0}
+			# Add runtime methods
+			Object.assign @::, proto::
 
-				return @
+			# Set a few event handlers
+			# Manage accounting after an entity has been persisted
+			@.on "persisted", ->
+				@_new = false
+				@_modified = {_count: 0}
 
-			definition.Constructor.name = type
+			return @
 
-			#Set up the prototype for any of this entity.
-			_build_prototype(type, definition, (protos && protos[type]) )
+		definition.Constructor.name = type
 
-		# Set up all the required methods - id!, _type!, and the mutaccs.
-		_build_prototype = (type, definition, proto) =>
-			definition.Constructor:: = Object.create Object.assign {}, JEFRi.EventDispatcher::,
-				# Get this entity's type. Use the closure'd reference.
-				_type: (full) ->
-					full = full || false
-					type
+		#Set up the prototype for any of this entity.
+		_build_prototype(type, definition, (protos && protos[type]) )
 
-				# Get this entity's ID.
-				id: (full) ->
-					"#{if full then "#{@_type()}/" else ""}#{@[definition.key]}"
+	# Set up all the required methods - id!, _type!, and the mutaccs.
+	_build_prototype = (type, definition, proto) =>
+		definition.Constructor:: = Object.create Object.assign {}, JEFRi.EventDispatcher::,
+			# Get this entity's type. Use the closure'd reference.
+			_type: (full) ->
+				full = full || false
+				type
 
-				# Find the status of an entity.
-				_status: ->
-					state = "MODIFIED"
-					if @_new
-						state = "NEW"
-					else if @_modified._count is 0
-						state = "PERSISTED"
-					state
+			# Get this entity's ID.
+			id: (full) ->
+				"#{if full then "#{@_type()}/" else ""}#{@[definition.key]}"
 
-				_definition: -> definition
+			# Find the status of an entity.
+			_status: ->
+				if @_new
+					"NEW"
+				else if @_modified._count is 0
+					"PERSISTED"
+				else
+					"MODIFIED"
 
-				# Add this entity to the persist transaction
-				_persist: (transaction, callback) ->
-					deferred = _.Deferred().then(callback)
-					top = !transaction
-					transaction = if top then new JEFRi.Transaction() else transaction
-					transaction.add(@)
+			_definition: -> definition
 
-					#Call the on_persist handler
-					@.on "persisting", transaction
+			# Add this entity to the persist transaction
+			_persist: (transaction, callback) ->
+				deferred = _.Deferred().then(callback)
 
-					#If we're on top, run the transaction...
-					if top then transaction.persist(callback)
+				top = !transaction
+				transaction = if top then new JEFRi.Transaction() else transaction
+				transaction.add(@)
 
-					deferred.promise()
+				#Call the on_persist handler
+				@emit "persisting", transaction
 
-				# Encode returns the bare object.
-				_encode: ->
-					min = {_type: @_type(), _id: @id() }
+				#If we're on top, run the transaction...
+				if top then transaction.persist(callback)
 
-					#Add all the properties to the writer.
-					for prop of definition.properties
-						min[prop] = @[prop]
+				# deferred.promise()
 
-					# Don't add relationships. Any walker will be responsible for adding only the entities they need.
-					min
+			# Encode returns the bare object.
+			_encode: ->
+				min = {_type: @_type(), _id: @id() }
 
-				# Delete this entity.
-				# Remove it from all relationships, invalidate the ID.
-				_destroy: _.lock ->
-					@emit "destroying", {}
-					for name, rel of definition.relationships
-						if rel.type is "has_many"
-							@[name].remove @
-						else
-							@[name] = null
-					ec.destroy @
-					@[definition.key] = 0
-					@emit "destroyed", {}
+				#Add all the properties to the writer.
+				for prop of definition.properties
+					min[prop] = @[prop]
 
-				_compare: (b) ->
-					JEFRi.EntityComparator @, b
+				# Don't add relationships. Any walker will be responsible for adding only the entities they need.
+				min
 
-			# Alias _encode as toJSON for ES5 JSON.stringify()
-			definition.Constructor::toJSON = definition.Constructor::_encode
+			# Delete this entity.
+			# Remove it from all relationships, invalidate the ID.
+			_destroy: _.lock ->
+				@emit "destroying", {}
+				for name, rel of definition.relationships
+					if rel.type is "has_many"
+						@[name].remove @
+					else
+						@[name] = null
+				ec.destroy @
+				@[definition.key] = 0
+				@emit "destroyed", {}
 
-			# Prepare property mutators and accessors.
-			for field, property of definition.properties
-				_build_mutacc definition, field, property
+			_compare: (b) ->
+				JEFRi.EntityComparator @, b
 
-			# Prepare navigation mutaccs.
-			for rel_name, relationship of definition.relationships
-				_build_relationship definition, rel_name, relationship
+		# Alias _encode as toJSON for ES5 JSON.stringify()
+		definition.Constructor::toJSON = definition.Constructor::_encode
 
-			for method, func of definition.methods
-				_build_method definition, method, func
+		# Prepare property mutators and accessors.
+		for field, property of definition.properties
+			_build_mutacc definition, field, property
 
-			# Add any additional prototypes functions
-			if proto then Object.assign definition.Constructor::, proto::
+		# Prepare navigation mutaccs.
+		for rel_name, relationship of definition.relationships
+			_build_relationship definition, rel_name, relationship
 
-		# Prepare a mutacc for a specific property.
-		# The property mutacc must handle entity accounting details.
-		_build_mutacc = (definition, field, property) =>
-			Object.defineProperty definition.Constructor::, field,
-				# The setter has some accounting details to handle
-				set: (value) ->
-					# Only actually update it if it is a new value.
-					if (value isnt @_fields[field])
-						# The actual set
-						@_fields[field] = value
+		for method, func of definition.methods
+			_build_method definition, method, func
 
-						# Update the modified list if not set...
-						if (!@_modified[field])
-							@_modified[field] = @_fields[field]
-							@_modified._count += 1
-						else
-							# It might be getting set to the old value...
-							if (@_modified[field] is value)
-								delete @_modified[field]
-								@_modified._count -= 1
+		# Add any additional prototypes functions
+		if proto then Object.assign definition.Constructor::, proto::
 
-						# Notify observers
-						@emit "modified", [field, value]
+	# Prepare a mutacc for a specific property.
+	# The property mutacc must handle entity accounting details.
+	_build_mutacc = (definition, field, property) =>
+		Object.defineProperty definition.Constructor::, field,
+			# The setter has some accounting details to handle
+			set: (value) ->
+				# Only actually update it if it is a new value.
+				if (value isnt @_fields[field])
+					# The actual set
+					@_fields[field] = value
+
+					# Update the modified list if not set...
+					if (!@_modified[field])
+						@_modified[field] = @_fields[field]
+						@_modified._count += 1
+					else
+						# It might be getting set to the old value...
+						if (@_modified[field] is value)
+							delete @_modified[field]
+							@_modified._count -= 1
+
+					# Notify observers
+					@emit "modified", [field, value]
+
+			get: ->
+				# Just a getter.
+				return @_fields[field]
+
+	# Attach the mutators and accessors (mutaccs) to the prototype.
+	#/* TODO Thoroughly debug these functions... */
+	_build_relationship = (definition, field, relationship) ->
+		access =
+			# The multiple relations functions.
+			if "has_many" is relationship.type
+				enumerable: true
+				configurable: false
+				# Return the set of entities in the relationship.
+				get: ->
+					# Check if the field has ever been set
+					if not (field of @_relationships)
+						# The field hasn't been set, so we haven't ever gotten this relationship before.
+						@_relationships[field] = new EntityArray @, field, relationship
+						# We'll need to go through and fix that.
+						# We'll need to grab everything who points to us...
+						# Loop over every entity this relationship could point to
+						for id, type of ec._instances[relationship.to.type]
+							# If these are related
+							if type[relationship.to.property] is @[relationship.property]
+								# Add it
+								@_relationships[field].add type
+					@_relationships[field]
+
+				# Add an entity to the relationship.
+				set: (relations...) ->
+					relations = relations.reduce(((a, b)->a.concat(b)), [])
+					# Lazy load
+					@[field]
+					for entity in relations
+						#There is not a local reference to the found entity.
+						@_relationships[field].add entity
+
+					@_modified._count += 1
+					# Notify observers
+					@emit "modified", [field, arguments]
+					@
+			else
+				set: _.lock (related) ->
+					if related is null # Actually a "Remove"
+						if "is_a" isnt relationship.type
+							try
+								@_relationships[field]?[relationship.back].remove @
+							catch
+								@_relationships[field]?[relationship.back] = null
+						@_relationships[field] = null
+						@[relationship.property] = null
+					else # A set
+						@_relationships[field] = related
+						resolve_ids.call @, related
+						if "is_a" isnt relationship.type
+							if relationship.back then related?[relationship.back] = @
+					# Notify observers
+					@_modified._count += 1
+					@emit "modified", [field, related]
+					@
 
 				get: ->
-					# Just a getter.
-					return @_fields[field]
-
-		# Attach the mutators and accessors (mutaccs) to the prototype.
-		#/* TODO Thoroughly debug these functions... */
-		_build_relationship = (definition, field, relationship) ->
-			access =
-				# The multiple relations functions.
-				if "has_many" is relationship.type
-					enumerable: true
-					configurable: false
-					# Return the set of entities in the relationship.
-					get: ->
-						# Check if the field has ever been set
-						if not (field of @_relationships)
-							# The field hasn't been set, so we haven't ever gotten this relationship before.
-							@_relationships[field] = new EntityArray @, field, relationship
-							# We'll need to go through and fix that.
-							# We'll need to grab everything who points to us...
-							# Loop over every entity this relationship could point to
-							for id, type of ec._instances[relationship.to.type]
-								# If these are related
-								if type[relationship.to.property] is @[relationship.property]
-									# Add it
-									@_relationships[field].add type
-						@_relationships[field]
-
-					# Add an entity to the relationship.
-					set: (relations...) ->
-						relations = relations.reduce(((a, b)->a.concat(b)), [])
-						# Lazy load
-						@[field]
-						for entity in relations
-							#There is not a local reference to the found entity.
-							@_relationships[field].add entity
-
-						@_modified._count += 1
-						# Notify observers
-						@emit "modified", [field, arguments]
-						@
-				else
-					set: _.lock (related) ->
-						if related is null # Actually a "Remove"
-							if "is_a" isnt relationship.type
-								try
-									@_relationships[field]?[relationship.back].remove @
-								catch
-									@_relationships[field]?[relationship.back] = null
-							@_relationships[field] = null
-							@[relationship.property] = null
-						else # A set
-							@_relationships[field] = related
-							resolve_ids.call @, related
-							if "is_a" isnt relationship.type
-								if relationship.back then related?[relationship.back] = @
-						# Notify observers
-						@_modified._count += 1
-						@emit "modified", [field, related]
-						@
-
-					get: ->
+					if @_relationships[field] is undefined
+						# Just need the one...
+						@_relationships[field] = ec._instances[relationship.to.type][@[relationship.property]]
+						# Make sure we found one
 						if @_relationships[field] is undefined
-							# Just need the one...
-							@_relationships[field] = ec._instances[relationship.to.type][@[relationship.property]]
-							# Make sure we found one
-							if @_relationships[field] is undefined
-								# If not, create it.
-								key = {}
-								key[relationship.to.property] = @[relationship.property]
-								@[field] = ec.build(relationship.to.type, key)
+							# If not, create it.
+							key = {}
+							key[relationship.to.property] = @[relationship.property]
+							@[field] = ec.build(relationship.to.type, key)
 
-						return @_relationships[field]
+					return @_relationships[field]
 
-			Object.defineProperty definition.Constructor::, field, access
+		Object.defineProperty definition.Constructor::, field, access
 
-			# Helper for has_a::set
-			resolve_ids = (related) ->
-				# If related is undefined, unset the property
-				if related is undefined
-					@[relationship.property] = undefined
-				# If @'s key is relprop, use it for related
-				else if definition.key is relationship.property # Always use this' ID if we can
+		# Helper for has_a::set
+		resolve_ids = (related) ->
+			# If related is undefined, unset the property
+			if related is undefined
+				@[relationship.property] = undefined
+			# If @'s key is relprop, use it for related
+			else if definition.key is relationship.property # Always use this' ID if we can
+				related[relationship.to.property] = @[relationship.property]
+			else if related._definition().key is relationship.to.property # Back-up ID
+				@[relationship.property] = related[relationship.to.property]
+			else # No IDs. If one is set, set the other to that
+				if @[relationship.property].match UUID.rvalid
 					related[relationship.to.property] = @[relationship.property]
-				else if related._definition().key is relationship.to.property # Back-up ID
+				else if related[relationship.to.property].match UUID.rvalid
 					@[relationship.property] = related[relationship.to.property]
-				else # No IDs. If one is set, set the other to that
-					if @[relationship.property].match _.UUID.rvalid
-						related[relationship.to.property] = @[relationship.property]
-					else if related[relationship.to.property].match _.UUID.rvalid
-						@[relationship.property] = related[relationship.to.property]
-					else #Nothing is set, use this' id
-						id = _.UUID.v4()
-						@[relationship.property] = id
-						related[relationship.to.property] = id
+				else #Nothing is set, use this' id
+					id = UUID.v4()
+					@[relationship.property] = id
+					related[relationship.to.property] = id
 
-		_build_method = (definition, method, func) ->
-			func =
-				definitions: func.definitions || {}
-				order: func.order || []
-			body = func.definitions.javascript || ""
-			params = func.order
-			if body && not body.match /window/
-				params.push body
-				fn = Function.apply null, params
-			else
-				fn = ->
-			definition.Constructor::[method] = fn
+	_build_method = (definition, method, func) ->
+		func =
+			definitions: func.definitions || {}
+			order: func.order || []
+		body = func.definitions.javascript || ""
+		params = func.order
+		if body && not body.match /window/
+			params.push body
+			fn = Function.apply null, params
+		else
+			fn = ->
+		definition.Constructor::[method] = fn
 
-		@load = (contextUri, prototypes) ->
-			Request(contextUri)
-			.then (data) ->
-				data = data || "{}"
-				data = if _.isString(data) then JSON.parse(data) else data
-				_set_context data, prototypes
-				ready.resolve()
-			.catch (e) ->
-				console.warn e, e.message
-				ready.reject e
-			.done()
+	@load = (contextUri, prototypes) ->
+		Request(contextUri)
+		.then (data) ->
+			data = data || "{}"
+			data = if _.isString(data) then JSON.parse(data) else data
+			_set_context data, prototypes
+			ready.promise(true)
+		.catch (e) ->
+			console.warn e, e.message
+			ready.reject e
+		.done()
 
-		# Prepare the runtime with the given contexts.
-		if (options && options.debug)
-			# The context object was provided by the caller
-			_set_context(options.debug.context, protos)
-			ready.resolve()
-		if contextUri then @load contextUri, protos
+	# Prepare the runtime with the given contexts.
+	if (options && options.debug)
+		# The context object was provided by the caller
+		_set_context(options.debug.context, protos)
+		ready.promise(false)
+	if contextUri then @load contextUri, protos
+	@
+
+# #### Entity Array helper
+pushResult = (entity)->
+	type = entity._type()
+	if (!@[type]) then @[type] = []
+	@[type].push(entity)
+
+# #### Runtime Prototype
+JEFRi.Runtime:: = Object.create
+	# Reset the runtime's data, maintains context definitions.
+	clear: ->
+		@_instances = {}
 		@
 
-	# #### Entity Array helper
-	pushResult = (entity)->
-		type = entity._type()
-		if (!@[type]) then @[type] = []
-		@[type].push(entity)
+	# Get the definition of an entity type.
+	definition: (name)->
+		name = name._type?() || name
+		@_context.entities[name]
 
-	# #### Runtime Prototype
-	JEFRi.Runtime:: = Object.create
-		# Reset the runtime's data, maintains context definitions.
-		clear: ->
-			@_instances = {}
-			@
+	# Add the methods in the extend prototype to the prototype of type specified
+	# affecting _ALL_ instances, both current and future, of type.
+	extend: (type, extend) ->
+		if (@_context.entities[type])
+			Object.assign @_context.entities[type].Constructor::, extend::
+		@
 
-		# Get the definition of an entity type.
-		definition: (name)->
-			name = name._type?() || name
-			@_context.entities[name]
+	# Return the canonical memory reference of the entity.
+	intern: (entity, updateOnIntern = false) ->
+		updateOnIntern = updateOnIntern || @settings.updateOnIntern
 
-		# Add the methods in the extend prototype to the prototype of type specified
-		# affecting _ALL_ instances, both current and future, of type.
-		extend: (type, extend) ->
-			if (@_context.entities[type])
-				Object.assign @_context.entities[type].Constructor::, extend::
-			@
+		if (entity.length && ! entity._type)
+			#Array-like
+			entities = for ent in entity
+				@intern(ent, updateOnIntern)
+			return entities
 
-		# Return the canonical memory reference of the entity.
-		intern: (entity, updateOnIntern = false) ->
-			updateOnIntern = updateOnIntern || @settings.updateOnIntern
+		if (updateOnIntern)
+			#Merge the given entity into the stored entity.
+			ret = @_instances[entity._type() ][entity.id() ] || entity
+			Object.assign ret._fields, entity._fields
+		else
+			#Take the stored one if possible, otherwise use the given entity.
+			ret = @_instances[entity._type() ][entity.id() ] || entity
 
-			if (entity.length && ! entity._type)
-				#Array-like
-				entities = for ent in entity
-					@intern(ent, updateOnIntern)
-				return entities
+		#Update the saved entity
+		@_instances[entity._type() ][entity.id() ] = ret
+		ret
 
-			if (updateOnIntern)
-				#Merge the given entity into the stored entity.
-				ret = @_instances[entity._type() ][entity.id() ] || entity
-				Object.assign ret._fields, entity._fields
-			else
-				#Take the stored one if possible, otherwise use the given entity.
-				ret = @_instances[entity._type() ][entity.id() ] || entity
+	# Return a new instance of an object described in the context.
+	build: (type, obj) ->
+		def = @definition(type)
+		if !def
+			throw "JEFRi::Runtime::build '#{type}' is not a defined type in this context."
+		obj = obj || {}
+		# We are going to build the new entity first, then, if there is a local
+		# instance, we will extend the local instance with the new instance.
+		r = new def.Constructor obj
+		if def.key of obj
+			# If the entity key is specified in obj, check the local storage.
+			demi = {_type : type}
+			demi[def.key] = obj[def.key]
+			instance = @find(demi)
+			if (instance.length > 0)
+				# Local instance, extend it with the new obj and return local.
+				instance = instance[0]
+				Object.assign instance._fields, r._fields
+				return instance
+		@_instances[type][r.id() ] = r
+		return r
 
-			#Update the saved entity
-			@_instances[entity._type() ][entity.id() ] = ret
-			ret
+	# Expand and intern a transaction.
+	expand: (transaction, action) ->
+		action = action || "persisted"
 
-		# Return a new instance of an object described in the context.
-		build: (type, obj) ->
-			def = @definition(type)
-			if !def
-				throw "JEFRi::Runtime::build '#{type}' is not a defined type in this context."
-			obj = obj || {}
-			# We are going to build the new entity first, then, if there is a local
-			# instance, we will extend the local instance with the new instance.
-			r = new def.Constructor obj
-			if def.key of obj
-				# If the entity key is specified in obj, check the local storage.
-				demi = {_type : type}
-				demi[def.key] = obj[def.key]
-				instance = @find(demi)
-				if (instance.length > 0)
-					# Local instance, extend it with the new obj and return local.
-					instance = instance[0]
-					Object.assign instance._fields, r._fields
-					return instance
-			@_instances[type][r.id() ] = r
-			return r
+		built = []
+		for entity in transaction.entities || []
+			e = @build(entity._type, entity)
+			e = @intern(e, true)
+			built.push(e)
 
-		# Expand and intern a transaction.
-		expand: (transaction, action) ->
-			action = action || "persisted"
+		# Trigger events on all entities
+		for e in built
+			e.emit action, true
 
-			built = []
-			for entity in transaction.entities || []
-				e = @build(entity._type, entity)
-				e = @intern(e, true)
-				built.push(e)
+		transaction.entities = built
 
-			# Trigger events on all entities
-			for e in built
-				e.emit action, true
+	# Completely remove an entity from this runtime
+	destroy: (entity) ->
+		delete @_instances[entity._type() ][entity.id() ]
+		@
 
-			transaction.entities = built
+	# Return an interned entity from the local instance matching spec.
+	#
+	# Spec requires an _type property and either the entity key or _id set.
+	find: (spec) ->
+		if (typeof spec is "string")
+			spec = {_type : spec}
+		to_return = []
+		r = @definition(spec._type)
+		results = @_instances[spec._type]
 
-		# Completely remove an entity from this runtime
-		destroy: (entity) ->
-			delete @_instances[entity._type() ][entity.id() ]
-			@
+		if spec.hasOwnProperty r.key || spec.hasOwnProperty '_id'
+			# If a key is set, return only that result.
+			if (results[spec[r.key]])
+				to_return.push(results[spec[r.key]])
+		else
+			# Add results to an array to clean up the return for the user.
+			for key, result of results
+				to_return.push result
 
-		# Return an interned entity from the local instance matching spec.
-		#
-		# Spec requires an _type property and either the entity key or _id set.
-		find: (spec) ->
-			if (typeof spec is "string")
-				spec = {_type : spec}
-			to_return = []
-			r = @definition(spec._type)
-			results = @_instances[spec._type]
+		to_return
 
-			if spec.hasOwnProperty r.key || spec.hasOwnProperty '_id'
-				# If a key is set, return only that result.
-				if (results[spec[r.key]])
-					to_return.push(results[spec[r.key]])
-			else
-				# Add results to an array to clean up the return for the user.
-				for key, result of results
-					to_return.push result
+# ## Transactions
+# ### Transaction
+# Object to handle transactions.
+JEFRi.Transaction = (spec, store) ->
+	Object.assign @,
+		attributes: {}
+		store: store
+		entities: if (spec instanceof Array) then spec else (if spec then [spec] else [])
 
-			to_return
+# ### Prototype
+JEFRi.Transaction:: = Object.create
+	# ### encode
+	encode: ->
+		transaction =
+			attributes: @attributes
+			entities: []
+
+		for entity in @entities
+			transaction.entities.push if JEFRi.isEntity(entity) then entity._encode() else entity
+
+		transaction
+
+	# ### toString
+	toString: ->
+		return JSON.stringify @encode()
+
+	# ### get*([store])*
+	# Execute the transaction as a GET request
+	get: (store = @store) ->
+		@emit "getting", {}
+
+		new Promise (resolve, reject)->
+			store = store || @store
+			store.execute('get', @).then ->
+				resolve @
+
+	# ### persist*([store])*
+	# Execute the transaction as a POST request
+	persist: (store = @store) ->
+		@emit "persisting", {}
+		new Promise (resolve)->
+			store.execute('persist', @).then (t)=>
+				for entity in t.entities
+					entity.emit "persisted", {}
+				@emit "persisted", {}
+				resolve @
+
+	# ### add*(spec...)*
+	# Add several entities to the transaction
+	add: (spec, force = false) ->
+		#Force spec to be an array
+		spec = if Array.isArray spec then spec else [].slice.call(arguments, 0)
+		for s in spec
+			# if not _.isEntity s
+			#	s = @store.settings.runtime.expand s
+			# TODO switch to direct lookup.
+			if yes #|| force ||  _(@entities).indexBy(JEFRi.EntityComparator s) < 0
+				#Hasn't been added yet...
+				@entities.push s
+		return @
+
+	# ### attributes*(attributes)*
+	# Set several attributes on the transaction
+	attributes: (attributes) ->
+		Object.assign @attributes,c attributes
+		@
