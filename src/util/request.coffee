@@ -7,7 +7,7 @@
 # 	else
 # 		serverRequest()
 
-request = require('request') # Will be aliased to browser by Webpack
+request = require('./request/server') # Will be aliased to browser by Webpack
 
 module.exports = (uri)->
 	# Consistently handle "" for requests
