@@ -83,6 +83,8 @@ module.exports = (grunt) ->
 						type: 'lcov'
 						dir: 'build/reports/coverage/'
 
+		release: {}
+
 	# These plugins provide necessary tasks.
 	grunt.loadNpmTasks "grunt-mocha-test"
 	grunt.loadNpmTasks "grunt-webpack"
@@ -90,6 +92,7 @@ module.exports = (grunt) ->
 	grunt.loadNpmTasks "grunt-contrib-uglify"
 	grunt.loadNpmTasks "grunt-contrib-clean"
 	grunt.loadNpmTasks "grunt-karma"
+	grunt.loadNpmTasks "grunt-release"
 
 	grunt.registerTask "connect", (grunt)->
 		mount = require('st')({ path: __dirname + '/test/context', url: '/' })
