@@ -27,8 +27,7 @@ module.exports = (grunt) ->
 					filename: './lib/<%= pkg.name %>.js'
 				resolve:
 					extensions: ['', ".js", ".coffee"]
-					alias:
-						'request': './request/browser.coffee'
+					packageAlias: 'browser',
 				module:
 					loaders: [
 						{ test: /\.coffee$/, loader: 'coffee-loader' }

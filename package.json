@@ -35,6 +35,9 @@
       "type": "MIT"
     }
   ],
+  "browser": {
+      "./src/util/request/server.coffee": "./src/util/request/browser.coffee"
+  },
   "devDependencies": {
     "chai": "^1.10.0",
     "coffee-loader": "^0.7.2",
