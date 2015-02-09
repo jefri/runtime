@@ -15,7 +15,7 @@
 				a.id() is b.id()
 			return cmp
 
-		#Duck type check if an object is an entity.
+		# Duck type check if an object is an entity.
 		isEntity: (obj = {}) ->
 			return obj._type and obj.id and
 				_.isFunction(obj._type) and _.isFunction(obj.id) or false
@@ -204,7 +204,7 @@
 				# Delete this entity.
 				# Remove it from all relationships, invalidate the ID.
 				_destroy: _.lock ->
-					@trigger "destroying", {}
+					@emit "destroying", {}
 					for name, rel of definition.relationships
 						if rel.type is "has_many"
 							@[name].remove @
@@ -212,7 +212,7 @@
 							@[name] = null
 					ec.destroy @
 					@[definition.key] = 0
-					@trigger "destroyed", {}
+					@emit "destroyed", {}
 
 				_compare: (b) ->
 					JEFRi.EntityComparator @, b
@@ -256,7 +256,7 @@
 								@_modified._count -= 1
 
 						# Notify observers
-						@.trigger "modified", [field, value]
+						@emit "modified", [field, value]
 
 				get: ->
 					# Just a getter.
@@ -297,7 +297,7 @@
 
 						@_modified._count += 1
 						# Notify observers
-						@.trigger "modified", [field, arguments]
+						@emit "modified", [field, arguments]
 						@
 				else
 					set: _.lock (related) ->
@@ -316,7 +316,7 @@
 								if relationship.back then related?[relationship.back] = @
 						# Notify observers
 						@_modified._count += 1
-						@.trigger "modified", [field, related]
+						@emit "modified", [field, related]
 						@
 
 					get: ->
@@ -470,7 +470,7 @@
 
 			# Trigger events on all entities
 			for e in built
-				e.trigger action, true
+				e.emit action, true
 
 			transaction.entities = built
 

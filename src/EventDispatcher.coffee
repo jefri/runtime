@@ -13,7 +13,7 @@ JEFRi.EventDispatcher:: =
 		index = listeners[event].indexOf(fn)
 		listeners[event].splice index, 1  if index isnt -1
 
-	trigger: (event, args)->
+	emit: (event, args)->
 		return  if @_listeners is `undefined`
 		listeners = @_listeners
 		listenerArray = listeners[event]

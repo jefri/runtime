@@ -32,9 +32,8 @@
 
 		# ### get*([store])*
 		# Execute the transaction as a GET request
-		get: (store) ->
-			d = new _.Deferred()
-			@.trigger "getting", {}
+		get: (store = @store) ->
+			@emit "getting", {}
 
 			store = store || @store
 			store.execute('get', @).then ->
