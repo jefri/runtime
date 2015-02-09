@@ -25,6 +25,8 @@ module.exports = (grunt) ->
 				entry: './src/Runtime.coffee'
 				output:
 					filename: './lib/<%= pkg.name %>.js'
+				resolve:
+					extensions: ['', ".js", ".coffee"]
 				module:
 					loaders: [
 						{ test: /\.coffee$/, loader: 'coffee-loader' }
