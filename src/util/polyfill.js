@@ -60,7 +60,19 @@ if (!Object.assign) {
 }
 
 if (!Object.isString) {
-  Object.isString = function(obj){
-    return Object.toString.call(contextUri) === '[object String]';
+  Object.isString = function(value){
+    return typeof value == 'string';
   }
+}
+
+if (!Array.isArray) {
+  Array.isArray = function(arg) {
+    return Object.prototype.toString.call(arg) === '[object Array]';
+  };
+}
+
+if (!Object.isFunction) {
+  Object.isFunction = function(obj) {
+    return typeof obj == 'function' || false;
+  };
 }

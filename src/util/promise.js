@@ -1,2 +1,100 @@
-(function(e){function g(h){return"function"==typeof h}function k(h){"undefined"!=typeof setImmediate?setImmediate(h):"undefined"!=typeof process&&process.nextTick?process.nextTick(h):setTimeout(h,0)}e[0][e[1]]=function n(f){function a(a,g){null==b&&null!=a&&(b=a,l=g,c.length&&k(function(){for(var a=0;a<c.length;a++)c[a]()}));return b}var b,l=[],c=[];a.then=function(a,e){function m(){try{var c=b?a:e;if(g(c)){var f=function(a){var c,b=0;try{if(a&&("object"==typeof a||g(a))&&g(c=a.then)){if(a===d)throw new TypeError;
-c.call(a,function(){b++||f.apply(void 0,arguments)},function(a){b++||d(!1,[a])})}else d(!0,arguments)}catch(e){b++||d(!1,[e])}};f(c.apply(void 0,l||[]))}else d(b,l)}catch(k){d(!1,[k])}}var d=n(f);null!=b?k(m):c.push(m);return d};f&&(a=f(a));return a}})("undefined"==typeof module?[window,"Promise"]:[module,"exports"]);
+(function(target) {
+	var undef;
+
+	function isFunction(f) {
+		return typeof f == 'function';
+	}
+	function isObject(f) {
+		return typeof f == 'object';
+	}
+
+
+	function defer(callback) {
+		if (typeof setImmediate != 'undefined')
+			setImmediate(callback);
+		else if (typeof process != 'undefined' && process['nextTick'])
+			process['nextTick'](callback);
+		else
+			setTimeout(callback, 0);
+	}
+
+	target[0][target[1]] = function pinkySwear(extend) {
+		var state;					 // undefined/null = pending, true = fulfilled, false = rejected
+		var values = [];		 // an array of values as arguments for the then() handlers
+		var deferred = [];	 // functions to call when set() is invoked
+
+		var set = function(newState, newValues) {
+			if (state == null && newState != null) {
+				state = newState;
+				if(Array.isArray(newValues)){
+					values = newValues;
+				} else {
+					values = [newValues];
+				}
+				if (deferred.length){
+					defer(function() {
+						for (var i = 0; i < deferred.length; i++)
+							deferred[i]();
+					});
+				}
+			}
+			return state;
+		};
+
+		set['then'] = function (onFulfilled, onRejected) {
+			var promise2 = pinkySwear(extend);
+			var callCallbacks = function() {
+				try {
+					var f = (state ? onFulfilled : onRejected);
+					if (isFunction(f)) {
+						function resolve(x) {
+							var then, cbCalled = 0;
+							try {
+								if (x && (isObject(x) || isFunction(x)) && isFunction(then = x['then'])) {
+									if (x === promise2)
+										throw new TypeError();
+									then['call'](x,
+										function() { if (!cbCalled++) resolve.apply(undef,arguments); } ,
+										function(value){ if (!cbCalled++) promise2(false,[value]);});
+								} else {
+									promise2(true, arguments);
+								}
+							} catch(e) {
+								if (!cbCalled++)
+									promise2(false, [e]);
+							}
+						}
+						resolve(f.apply(undef, values || []));
+					} else {
+						promise2(state, values);
+					}
+				} catch (e) {
+					promise2(false, [e]);
+				}
+			};
+			if (state != null) {
+				defer(callCallbacks);
+			} else {
+				deferred.push(callCallbacks);
+			}
+			return promise2;
+		};
+
+		set['catch'] = function (onRejected){
+			return set['then'](function(){}, onRejected);
+		};
+
+		set['finally'] = function(afterPromise){
+			return set['catch'](function(){return null;})['then'](afterPromise);
+		};
+
+		set['done'] = function(afterPromise, onRejected){
+			return null;
+		};
+
+		if(extend){
+			set = extend(set);
+		}
+		return set;
+	};
+})(typeof module == 'undefined' ? [window, 'pinkySwear'] : [module, 'exports']);

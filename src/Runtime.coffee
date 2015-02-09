@@ -5,9 +5,12 @@
 #   http://jefri.org
 
 require('./util/polyfill')
+
+Eventer = require('./util/event')
 Promise = require('./util/promise')
-Request = require('superagent')
+Request = require('./util/request')
 UUID = require('./util/UUID')
+lock = require('./util/lock')
 
 # ## JEFRi Namespace
 JEFRi = module.exports =
@@ -23,7 +26,7 @@ JEFRi = module.exports =
 	# Duck type check if an object is an entity.
 	isEntity: (obj = {}) ->
 		return obj._type and obj.id and
-			_.isFunction(obj._type) and _.isFunction(obj.id) or false
+			Object.isFunction(obj._type) and Object.isFunction(obj.id) or false
 
 EntityArray = (@entity, @field, @relationship)->
 EntityArray:: = Object.create Array::
@@ -148,8 +151,8 @@ JEFRi.Runtime = (contextUri, options, protos) ->
 			# Attach a privileged copy of the full id, more for debugging than use.
 			@_id = @id true
 
-			# Add runtime methods
-			Object.assign @::, proto::
+			# Add runtime methods //?
+			# Object.assign @::, proto::
 
 			# Set a few event handlers
 			# Manage accounting after an entity has been persisted
@@ -166,7 +169,7 @@ JEFRi.Runtime = (contextUri, options, protos) ->
 
 	# Set up all the required methods - id!, _type!, and the mutaccs.
 	_build_prototype = (type, definition, proto) =>
-		definition.Constructor:: = Object.create Object.assign {}, JEFRi.EventDispatcher::,
+		definition.Constructor:: = Object.create Object.assign {}, Eventer::,
 			# Get this entity's type. Use the closure'd reference.
 			_type: (full) ->
 				full = full || false
@@ -216,7 +219,7 @@ JEFRi.Runtime = (contextUri, options, protos) ->
 
 			# Delete this entity.
 			# Remove it from all relationships, invalidate the ID.
-			_destroy: _.lock ->
+			_destroy: lock ->
 				@emit "destroying", {}
 				for name, rel of definition.relationships
 					if rel.type is "has_many"
@@ -313,7 +316,7 @@ JEFRi.Runtime = (contextUri, options, protos) ->
 					@emit "modified", [field, arguments]
 					@
 			else
-				set: _.lock (related) ->
+				set: lock (related) ->
 					if related is null # Actually a "Remove"
 						if "is_a" isnt relationship.type
 							try
@@ -384,12 +387,13 @@ JEFRi.Runtime = (contextUri, options, protos) ->
 		Request(contextUri)
 		.then (data) ->
 			data = data || "{}"
-			data = if _.isString(data) then JSON.parse(data) else data
+			data = if Object.isString(data) then JSON.parse(data) else data
 			_set_context data, prototypes
 			ready.promise(true)
 		.catch (e) ->
-			console.warn e, e.message
-			ready.reject e
+			console.warn e
+			console.log e.stack
+			ready.promise false, e
 		.done()
 
 	# Prepare the runtime with the given contexts.

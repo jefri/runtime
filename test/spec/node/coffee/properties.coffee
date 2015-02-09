@@ -1,7 +1,5 @@
-should = require "should"
 describe "JEFRi", ->
-	jefri = require "../../../../lib/jefri"
-	_ = require "superscore"
+	jefri = require "../../../../src/Runtime"
 
 	context = null
 

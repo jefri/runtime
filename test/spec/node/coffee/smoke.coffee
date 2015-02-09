@@ -1,6 +1,6 @@
 describe 'Smoke', ->
 	it 'Loads', (done)->
-		jefri = require '../../../lib/jefri'
+		jefri = require "../../../../src/Runtime"
 		should.exist jefri
 		runtime = new jefri.Runtime "http://souther.co/EntityContext.json"
 		runtime.ready

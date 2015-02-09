@@ -36,6 +36,7 @@
     }
   ],
   "devDependencies": {
+    "chai": "^1.10.0",
     "coffee-loader": "^0.7.2",
     "coffee-script": "^1.9.0",
     "grunt": "~0.4.1",
@@ -52,12 +53,15 @@
     "grunt-jasmine-node": "~0.1.0",
     "grunt-mocha-test": "~0.6.3",
     "should": "~1.3.0",
+    "sinon": "^1.12.2",
+    "sinon-chai": "^2.6.0",
     "superscore": "^0.3.4",
     "webpack": "^1.5.3"
   },
   "dependencies": {
     "grunt-webpack": "^1.0.8",
     "q": "~0.9.6",
+    "qwest": "^1.5.4",
     "request": "~2.27.0",
     "superagent": "^0.21.0",
     "superscore": "~0.3.4",

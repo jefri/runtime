@@ -1,5 +1,5 @@
-JEFRi.EventDispatcher = ->
-JEFRi.EventDispatcher:: =
+module.exports = EventDispatcher = ->
+EventDispatcher:: =
 	# constructor: EventDispatcher
 	on: (event, fn)->
 		@_listeners = {} unless @_listeners?

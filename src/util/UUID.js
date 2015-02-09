@@ -1,3 +1,4 @@
+var SIZE = 1;
 var UUID = {};
 module.exports = UUID;
 
@@ -25,6 +26,7 @@ if(typeof window !== 'undefined') {
   }
 }
 
+debugger
 UUID.v4 = function() {
 	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
 		var r = random()&0x0f, v = c === 'x' ? r : (r&0x3|0x8);

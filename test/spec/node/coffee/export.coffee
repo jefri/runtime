@@ -1,13 +1,12 @@
-should = require "should"
 describe "JEFRi", ->
-	jefri = require "../../../../lib/jefri"
-	_ = require "superscore"
+	jefri = require "../../../../src/Runtime"
 
 	context = null
 
 	beforeEach (done)->
 		runtime = new jefri.Runtime "http://localhost:8000/context.json"
-		runtime.ready.then (a)->
+		runtime.ready
+		.then (a)->
 			context = runtime.build "Context", name: "network"
 
 			router = runtime.build "Entity",
@@ -20,7 +19,6 @@ describe "JEFRi", ->
 
 			context.entities = [host, router]
 
-			
 			router.properties = [
 				runtime.build "Property",
 					name: "router_id"
@@ -65,14 +63,17 @@ describe "JEFRi", ->
 			host_router.from = host
 
 			done()
+		.catch (err)->
+			done err
 
 	it "exports", (done)->
+		debugger
 		context.should.have.property 'export'
 		stringContext = context.export()
 		stringContext.length.should.be.greaterThan 0
 		contextContent = JSON.parse stringContext
 
-		_(contextContent.entities).keys().length.should.equal 2
+		Object.keys(contextContent.entities).length.should.equal 2
 		contextContent.entities.Router.key.should.equal "router_id"
 		contextContent.entities.Host.relationships.router.to.type.should.equal "Router"
 

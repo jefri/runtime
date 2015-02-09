@@ -49,10 +49,13 @@ module.exports = (grunt) ->
 			files: ["test/nunit/built/*js"]
 
 		mochaTest:
+			options:
+				# timeout: 1e6
+				reporter: 'spec'
+				require:
+					"test/helpers.js"
 			runtime:
 				src: ["test/spec/node/**/*.coffee"]
-				options:
-					reporter: 'nyan'
 
 		qunit:
 			min:
@@ -72,8 +75,5 @@ module.exports = (grunt) ->
 	# Default task.
 	grunt.registerTask "distribute", ["uglify:dist"]
 	grunt.registerTask "build", ["webpack:jefri", "distribute"]
-	grunt.registerTask "test_nunit", ["coffee:nunit", "nodeunit"]
-	grunt.registerTask "test_jasmine", ["mochaTest:runtime"]
-	grunt.registerTask "test_qunit", ["coffee:qunit", "qunit:min"]
-	grunt.registerTask "test", ["connect:testing", "test_nunit", "test_jasmine", "test_qunit"]
-	grunt.registerTask "default", ["clean", "build", "test"]
+	grunt.registerTask "testNode", ["connect:testing", "mochaTest:runtime"]
+	grunt.registerTask "default", ["clean", "testNode", "build", ]
