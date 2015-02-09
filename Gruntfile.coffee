@@ -7,6 +7,16 @@ module.exports = (grunt) ->
 		dest: dest
 		ext: ".js"
 
+	# butt - Browser Under Test Tools
+	butt = []
+	unless process.env.DEBUG
+		if process.env.BAMBOO
+			butt.push 'PhantomJS'
+		else if process.env.TRAVIS
+			butt.push 'Firefox'
+		else
+			butt.push 'Chrome'
+
 	grunt.initConfig
 		pkg: grunt.file.readJSON 'package.json'
 		meta:
@@ -44,11 +54,6 @@ module.exports = (grunt) ->
 				]
 				dest: "lib/<%= pkg.name %>.min.js"
 
-		connect:
-			testing:
-				root: '.'
-				port: 8000
-
 		mochaTest:
 			options:
 				# timeout: 1e6
@@ -61,7 +66,7 @@ module.exports = (grunt) ->
 		karma:
 			client:
 				options:
-					browsers: ['Chrome']
+					browsers: butt
 					frameworks: [ 'mocha', 'sinon-chai' ]
 					reporters: [ 'spec', 'junit', 'coverage' ]
 					singleRun: true,
@@ -78,20 +83,29 @@ module.exports = (grunt) ->
 						type: 'lcov'
 						dir: 'build/reports/coverage/'
 
-
 	# These plugins provide necessary tasks.
 	grunt.loadNpmTasks "grunt-mocha-test"
 	grunt.loadNpmTasks "grunt-webpack"
 	grunt.loadNpmTasks "grunt-contrib-watch"
-	grunt.loadNpmTasks "grunt-contrib-qunit"
-	grunt.loadNpmTasks "grunt-contrib-nodeunit"
 	grunt.loadNpmTasks "grunt-contrib-uglify"
-	grunt.loadNpmTasks "grunt-contrib-connect"
 	grunt.loadNpmTasks "grunt-contrib-clean"
 	grunt.loadNpmTasks "grunt-karma"
+
+	grunt.registerTask "connect", (grunt)->
+		mount = require('st')({ path: __dirname + '/test/context', url: '/' })
+		require('http').createServer (req, res)->
+			res.setHeader 'Access-Control-Allow-Origin', '*'
+			res.setHeader 'Access-Control-Allow-Credentials', true
+			res.setHeader 'Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept'
+			res.setHeader 'Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS'
+			if (mount(req, res))
+				return
+			else
+				res.end('this is not a static file')
+		.listen(8000)
 
 	# Default task.
 	grunt.registerTask "distribute", ["uglify:dist"]
 	grunt.registerTask "build", ["webpack:jefri", "distribute"]
-	grunt.registerTask "testNode", ["connect:testing", "mochaTest:runtime"]
+	grunt.registerTask "testNode", ["connect", "mochaTest:runtime"]
 	grunt.registerTask "default", ["clean", "testNode", "build", "karma:client"]

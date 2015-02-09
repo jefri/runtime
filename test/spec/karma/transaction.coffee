@@ -1,7 +1,7 @@
 describe "Transaction", ->
 	runtime = null
 	beforeEach ->
-		runtime = new JEFRi.Runtime "/test/qunit/min/context/user.json",
+		runtime = new JEFRi.Runtime "http://localhost:8000/user.json",
 			storeURI: "/test/"
 
 	it "Transaction Basics", (done)->

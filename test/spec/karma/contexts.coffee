@@ -7,7 +7,7 @@ equal = (a, b)->
 
 describe "Contexts", ->
 	it "Relationships", (done)->
-		runtime = new JEFRi.Runtime "/test/qunit/min/context/jefri.json"
+		runtime = new JEFRi.Runtime("http://localhost:8000/jefri.json")
 		runtime.ready
 		.then ->
 			context = runtime.build("Context")

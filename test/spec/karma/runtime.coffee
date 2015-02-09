@@ -2,9 +2,12 @@ ok = (v)->
 	should.exist v
 	v.should.be.ok()
 
+equal = (a, b)->
+	a.should.equal(b)
+
 describe "JEFRi Runtime", ->
 
-	it "Runtime Prototype", (done)->
+	it "Runtime Prototype", ->
 		ok JEFRi.Runtime, "JEFRi Runtime is available."
 		runtime = new JEFRi.Runtime "http://localhost:8000/context.json"
 		ok runtime.definition, "JEFRi.Runtime::definition"
@@ -12,8 +15,8 @@ describe "JEFRi Runtime", ->
 		ok runtime.intern, "JEFRi.Runtime::intern"
 		ok runtime.expand, "JEFRi.Runtime::expand"
 
-	asyncTest "Instantiate Runtime", ->
-		runtime = new JEFRi.Runtime "/test/qunit/min/context/user.json",
+	it "Instantiate Runtime", (done)->
+		runtime = new JEFRi.Runtime "http://localhost:8000/user.json",
 			storeURI: "/test/"
 
 		runtime.ready
@@ -42,10 +45,10 @@ describe "JEFRi Runtime", ->
 
 			aid = authinfo.id()
 			authinfo._destroy()
-			equal authinfo.id(), 0, "ID zeroed."
-			equal authinfo._relationships.user, null, "Relationship cleared."
-			equal user._relationships.authinfo, null, "Remote relationship cleared."
-			equal runtime._instances.Authinfo[aid], `undefined`, "Removed from runtime instances."
+			equal authinfo.id(), '0', "ID zeroed."
+			should.not.exist authinfo._relationships.user, "Relationship cleared."
+			should.not.exist user._relationships.authinfo, "Remote relationship cleared."
+			should.not.exist runtime._instances.Authinfo[aid], "Removed from runtime instances."
 
 			user2 = runtime.build "User",
 				name: "portaj"
@@ -57,14 +60,14 @@ describe "JEFRi Runtime", ->
 			equal authinfo2.user_id, user2.id(), "Authinfo2 refers to correct user."
 			equal authinfo2.user.id(), user2.id(), "Authinfo2 returns correct user."
 			user2.authinfo = null
-			equal user2._relationships.authinfo, null, "User2 removed authinfo."
-			equal authinfo2._relationships.user, null, "Authinfo2 removed user."
+			should.not.exist user2._relationships.authinfo, "User2 removed authinfo."
+			should.not.exist authinfo2._relationships.user, "Authinfo2 removed user."
 
-			start()
+			done()
 		.catch done
 
 	it "Runtime Features", (done)->
-		runtime = new JEFRi.Runtime "/test/qunit/min/context/user.json",
+		runtime = new JEFRi.Runtime "http://localhost:8000/user.json",
 			storeURI: "/test/"
 		runtime.ready
 		.then ->
@@ -72,15 +75,15 @@ describe "JEFRi Runtime", ->
 				name: "southerd"
 				address: "davidsouther@gmail.com"
 			ok user._runtime, "Entity has reference to creating runtime."
-			ok _(user).isEntity(), "isEntity checks correctly."
+			ok JEFRi.isEntity(user), "isEntity checks correctly."
 			done()
 		.catch done
 
-	test "isEntity", ->
+	it "isEntity", ->
 		[null, undefined, "", 'foo', 123, 45.67].forEach (e)->
-			equal _(e).isEntity(), false, "'#{e}' is not an entity"
+			equal JEFRi.isEntity(e), false, "'#{e}' is not an entity"
 
-	test "Transaction Prototype", ->
+	it "Transaction Prototype", ->
 		ok JEFRi.Transaction, "JEFRi Transaction is available."
 		t = new JEFRi.Transaction()
 		ok t, "Created Transaction"
@@ -90,18 +93,14 @@ describe "JEFRi Runtime", ->
 		ok t.persist, "JEFRi.Transaction::persist"
 
 	it "Exceptional cases", (done)->
-		runtime = new JEFRi.Runtime "/test/qunit/min/context/user.json",
+		runtime = new JEFRi.Runtime "http://localhost:8000/user.json",
 			storeURI: "/test/"
 		runtime.ready
 		.then ->
 			badType = ->
 				foo = runtime.build("foo")
 			ok runtime, "Could load runtime."
-			checkBadTypeException = (ex) ->
-				return true	if ex.match and ex.match(/JEFRi::Runtime::build 'foo' is not a defined type in this context./)
-				false
-
-			# checkBadTypeException = "JEFRi::runtime::build 'foo' is not a defined type in the context.";
-			raises badType, checkBadTypeException, "Create bad type generates exception."
+			checkBadTypeException = "JEFRi::Runtime::build 'foo' is not a defined type in this context."
+			badType.should.throw checkBadTypeException, "Create bad type generates exception."
 			done()
 		.catch done

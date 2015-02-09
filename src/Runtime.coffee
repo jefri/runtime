@@ -1,5 +1,5 @@
 #	 JEFRi Runtime.js
-#	 (c) 2011-2012 David Souther
+#	 (c) 2011-2015 David Souther
 #	 JEFRi is freely distributable under the MIT license.
 #	 For all details and documentation:
 #	 http://jefri.org
@@ -386,6 +386,7 @@ JEFRi.Runtime = (contextUri, options, protos) ->
 	@load = (contextUri, prototypes) ->
 		Request(contextUri)
 		.then (data) ->
+			debugger
 			data = data || "{}"
 			data = if Object.isString(data) then JSON.parse(data) else data
 			_set_context data, prototypes
@@ -581,3 +582,6 @@ JEFRi.Transaction:: = Object.create
 	attributes: (attributes) ->
 		Object.assign @attributes,c attributes
 		@
+
+
+if window? then window.JEFRi = module.exports

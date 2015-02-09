@@ -4,7 +4,8 @@ ok = (v)->
 
 describe "Contexts", ->
 	it "Context", (done)->
-		runtime = new JEFRi.Runtime("/test/qunit/min/context/jefri.json")
+		debugger
+		runtime = new JEFRi.Runtime("http://0.0.0.0:8000/jefri.json")
 		runtime.ready
 		.then ->
 			ok runtime._context.entities, "Has entities."
@@ -44,8 +45,8 @@ describe "Contexts", ->
 			equal host.properties.length, 5, "5th property added."
 			note.entity = null
 			equal host.properties.length, 4, "5th property removed."
-			equal note._relationships.entity, null, "Relationship removed."
-			equal note.entity_id, `undefined`, "Relationship key zeroed."
+			should.not.exist note._relationships.entity, "Relationship removed."
+			should.not.exist  note.entity_id, "Relationship key zeroed."
 
-			start()
+			done()
 		.catch done

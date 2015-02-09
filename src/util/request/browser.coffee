@@ -41,7 +41,7 @@ ajax = (options)->
 	# No need to return the entire XHR request.
 	promise
 
-module.exports = ->
+module.exports =
 	# get(url[, options])
 	# Shorthand for a GET request.
 	get: (url, options)->
