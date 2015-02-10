@@ -4,13 +4,13 @@
 #	 For all details and documentation:
 #	 http://jefri.org
 
-require('./util/polyfill')
+jiffies = require('jefri-jiffies')
 
-Eventer = require('./util/event')
-Promise = require('./util/promise')
-Request = require('./util/request')
-UUID = require('./util/UUID')
-lock = require('./util/lock')
+Eventer = jiffies.Event
+Promise = jiffies.promise
+Request = jiffies.request
+UUID = jiffies.UUID
+lock = jiffies.lock
 
 # ## JEFRi Namespace
 JEFRi = module.exports =
@@ -26,14 +26,14 @@ JEFRi = module.exports =
 	# Duck type check if an object is an entity.
 	isEntity: (obj = {}) ->
 		return obj._type and obj.id and
-			Object.isFunction(obj._type) and Object.isFunction(obj.id) or false
+			Function.isFunction(obj._type) and Function.isFunction(obj.id) or false
 
 EntityArray = (@entity, @field, @relationship)->
 EntityArray:: = Object.create Array::
 EntityArray::remove = (entity)->
 	return if entity is null
 	i = @length - 1
-	while i > - 1
+	while i >= 0
 		if @[i]._compare entity
 			if @relationship.back
 				e = @[i]
@@ -56,9 +56,6 @@ EntityArray::add = (entity)->
 		#Call the reverse setter
 		entity[@relationship.back] = @entity if @relationship.back
 	@entity
-
-# Add isEntity to the underscore function.
-# _.mixin isEntity: JEFRi.isEntity
 
 # ### Runtime Constructor
 JEFRi.Runtime = (contextUri, options, protos) ->
@@ -386,7 +383,6 @@ JEFRi.Runtime = (contextUri, options, protos) ->
 	@load = (contextUri, prototypes) ->
 		Request(contextUri)
 		.then (data) ->
-			debugger
 			data = data || "{}"
 			data = if Object.isString(data) then JSON.parse(data) else data
 			_set_context data, prototypes
@@ -442,14 +438,14 @@ JEFRi.Runtime:: = Object.create
 
 		if (updateOnIntern)
 			#Merge the given entity into the stored entity.
-			ret = @_instances[entity._type() ][entity.id() ] || entity
+			ret = @_instances[ entity._type() ][ entity.id() ] || entity
 			Object.assign ret._fields, entity._fields
 		else
 			#Take the stored one if possible, otherwise use the given entity.
-			ret = @_instances[entity._type() ][entity.id() ] || entity
+			ret = @_instances[ entity._type() ][ entity.id() ] || entity
 
 		#Update the saved entity
-		@_instances[entity._type() ][entity.id() ] = ret
+		@_instances[ entity._type() ][ entity.id() ] = ret
 		ret
 
 	# Return a new instance of an object described in the context.
@@ -519,14 +515,14 @@ JEFRi.Runtime:: = Object.create
 # ## Transactions
 # ### Transaction
 # Object to handle transactions.
-JEFRi.Transaction = (spec, store) ->
-	Object.assign @,
-		attributes: {}
-		store: store
-		entities: if (spec instanceof Array) then spec else (if spec then [spec] else [])
+class JEFRi.Transaction
+	constructor: (spec, store) ->
+		Object.assign @,
+			attributes: {}
+			store: store
+			entities: if (spec instanceof Array) then spec else (if spec then [spec] else [])
 
-# ### Prototype
-JEFRi.Transaction:: = Object.create
+	# ### Prototype
 	# ### encode
 	encode: ->
 		transaction =
@@ -544,28 +540,26 @@ JEFRi.Transaction:: = Object.create
 
 	# ### get*([store])*
 	# Execute the transaction as a GET request
-	get: (store = @store) ->
+	get: (store = @store)->
 		@emit "getting", {}
 
-		new Promise (resolve, reject)->
-			store = store || @store
-			store.execute('get', @).then ->
-				resolve @
+		store = store || @store
+		store.execute('get', @).then ->
+			resolve @
 
 	# ### persist*([store])*
 	# Execute the transaction as a POST request
-	persist: (store = @store) ->
+	persist: (store = @store)->
 		@emit "persisting", {}
-		new Promise (resolve)->
-			store.execute('persist', @).then (t)=>
-				for entity in t.entities
-					entity.emit "persisted", {}
-				@emit "persisted", {}
-				resolve @
+		store.execute('persist', @).then (t)=>
+			for entity in t.entities
+				entity.emit "persisted", {}
+			@emit "persisted", {}
+			resolve @
 
 	# ### add*(spec...)*
 	# Add several entities to the transaction
-	add: (spec, force = false) ->
+	add: (spec, force = false)->
 		#Force spec to be an array
 		spec = if Array.isArray spec then spec else [].slice.call(arguments, 0)
 		for s in spec
@@ -582,6 +576,5 @@ JEFRi.Transaction:: = Object.create
 	attributes: (attributes) ->
 		Object.assign @attributes,c attributes
 		@
-
 
 if window? then window.JEFRi = module.exports

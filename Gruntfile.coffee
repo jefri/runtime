@@ -1,12 +1,4 @@
 module.exports = (grunt) ->
-
-	coffees = (cwd, dest)->
-		expand: true
-		cwd: cwd
-		src: "*.coffee"
-		dest: dest
-		ext: ".js"
-
 	# butt - Browser Under Test Tools
 	butt = []
 	unless process.env.DEBUG
@@ -20,11 +12,11 @@ module.exports = (grunt) ->
 	grunt.initConfig
 		pkg: grunt.file.readJSON 'package.json'
 		meta:
-			banner: '
-			// <%= pkg.title || pkg.name %> - v<%= pkg.version %> - <%= grunt.template.today("yyyy-mm-dd") %> \n
-			<%= pkg.homepage ? "// " + pkg.homepage + "\n" : "" %>
-			// Copyright (c) 2012 - <%= grunt.template.today("yyyy") %> <%= pkg.author.name %>;
-			Licensed <%= _.pluck(pkg.licenses, "type").join(", ") %>'
+			banner:
+				'// <%= pkg.title || pkg.name %> - v<%= pkg.version %> - <%= grunt.template.today("yyyy-mm-dd") %> \n
+				<%= pkg.homepage ? "// " + pkg.homepage + "\n" : "" %>
+				// Copyright (c) 2012 - <%= grunt.template.today("yyyy") %> <%= pkg.author.name %>;
+				Licensed <%= _.pluck(pkg.licenses, "type").join(", ") %>'
 
 		clean:
 			app:
@@ -41,10 +33,6 @@ module.exports = (grunt) ->
 				module:
 					loaders: [
 						{ test: /\.coffee$/, loader: 'coffee-loader' }
-					]
-					noParse: [
-						/util\/UUID/,
-						/util\/request\/server/
 					]
 
 		uglify:
@@ -64,24 +52,31 @@ module.exports = (grunt) ->
 				src: ["test/spec/node/**/*.coffee"]
 
 		karma:
+			options:
+				browsers: butt
+				frameworks: [ 'mocha', 'sinon-chai' ]
+				reporters: [ 'spec', 'junit', 'coverage' ]
+				singleRun: true,
+				logLevel: 'INFO'
+				preprocessors:
+					'test/**/*.coffee': [ 'coffee' ]
+				junitReporter:
+					outputFile: 'build/reports/karma.xml'
+				coverageReporter:
+					type: 'lcov'
+					dir: 'build/reports/coverage/'
 			client:
 				options:
-					browsers: butt
-					frameworks: [ 'mocha', 'sinon-chai' ]
-					reporters: [ 'spec', 'junit', 'coverage' ]
-					singleRun: true,
-					logLevel: 'INFO'
-					preprocessors:
-						'test/**/*.coffee': [ 'coffee' ]
 					files: [
 						'lib/jefri.js',
 						'test/spec/karma/**/*.coffee'
 					]
-					junitReporter:
-						outputFile: 'build/reports/karma.xml'
-					coverageReporter:
-						type: 'lcov'
-						dir: 'build/reports/coverage/'
+			min:
+				options:
+					files: [
+						'lib/jefri.min.js',
+						'test/spec/karma/**/*.coffee'
+					]
 
 		release: {}
 
@@ -111,4 +106,4 @@ module.exports = (grunt) ->
 	grunt.registerTask "distribute", ["uglify:dist"]
 	grunt.registerTask "build", ["webpack:jefri", "distribute"]
 	grunt.registerTask "testNode", ["connect", "mochaTest:runtime"]
-	grunt.registerTask "default", ["clean", "testNode", "build", "karma:client"]
+	grunt.registerTask "default", ["clean", "testNode", "build", "karma:client", "karma:min"]

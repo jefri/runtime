@@ -20,7 +20,10 @@
     "lib/",
     "package.json"
   ],
-  "main": "./lib/jefri",
+  "main": "./src/jefri",
+  "scripts": {
+    "test": "./node_modules/.bin/grunt"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/jefri/jefri-runtime"
@@ -35,9 +38,6 @@
       "type": "MIT"
     }
   ],
-  "browser": {
-    "./src/util/request/server.coffee": "./src/util/request/browser.coffee"
-  },
   "devDependencies": {
     "chai": "^1.10.0",
     "coffee-loader": "^0.7.2",
@@ -71,6 +71,7 @@
     "st": "^0.5.2"
   },
   "dependencies": {
-    "request": "~2.27.0"
+    "request": "~2.27.0",
+    "jefri-jiffies": "~0.0.0"
   }
 }
