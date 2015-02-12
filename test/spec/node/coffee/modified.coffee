@@ -1,6 +1,6 @@
 describe "JEFRi", ->
-	jefri = require "../../../../src/Runtime"
-	
+	jefri = require "../../../../src/index.js"
+
 	context = runtime = null
 
 	beforeEach (done)->

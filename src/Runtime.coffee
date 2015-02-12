@@ -4,6 +4,7 @@
 #	 For all details and documentation:
 #	 http://jefri.org
 
+JEFRi = require('./jefri')
 jiffies = require('jefri-jiffies')
 
 Eventer = jiffies.Event
@@ -12,53 +13,10 @@ Request = jiffies.request
 UUID = jiffies.UUID
 lock = jiffies.lock
 
-# ## JEFRi Namespace
-JEFRi = module.exports =
-	# Compare two entities for equality. Entities are equal if they
-	# are of the same type and have equivalent IDs.
-	EntityComparator: (a, b) ->
-		cmp =
-			a and b and
-			a._type() is b._type() and
-			a.id() is b.id()
-		return cmp
-
-	# Duck type check if an object is an entity.
-	isEntity: (obj = {}) ->
-		return obj._type and obj.id and
-			Function.isFunction(obj._type) and Function.isFunction(obj.id) or false
-
-EntityArray = (@entity, @field, @relationship)->
-EntityArray:: = Object.create Array::
-EntityArray::remove = (entity)->
-	return if entity is null
-	i = @length - 1
-	while i >= 0
-		if @[i]._compare entity
-			if @relationship.back
-				e = @[i]
-				try
-					e[@relationship.back].remove @
-				catch
-					e[@relationship.back] = null
-			@splice i, 1
-		i--
-	@
-EntityArray::add = (entity)->
-	found = null
-	@entity._relationships[@field].forEach (other)->
-		return if found?
-		found = other if JEFRi.EntityComparator entity, other
-	unless found?
-		#There is not a local reference to the found entity.
-		@entity._relationships[@field].push entity
-
-		#Call the reverse setter
-		entity[@relationship.back] = @entity if @relationship.back
-	@entity
+EntityArray = require './entityarray'
 
 # ### Runtime Constructor
-JEFRi.Runtime = (contextUri, options, protos) ->
+module.exports = JEFRi.Runtime = (contextUri, options, protos) ->
 	if not @ instanceof JEFRi.Runtime
 		return new JEFRi.Rutime contextUri, options, protos
 
@@ -384,9 +342,15 @@ JEFRi.Runtime = (contextUri, options, protos) ->
 		Request(contextUri)
 		.then (data) ->
 			data = data || "{}"
-			data = if Object.isString(data) then JSON.parse(data) else data
-			_set_context data, prototypes
-			ready.promise(true)
+			try
+				data = if Object.isString(data) then JSON.parse(data) else data
+				_set_context data, prototypes
+				ready.promise(true)
+			catch e
+				console.error 'Could not load context'
+				console.warn e
+				console.log data
+				ready.promise(false)
 		.catch (e) ->
 			console.warn e
 			console.log e.stack
@@ -511,70 +475,3 @@ JEFRi.Runtime:: = Object.create
 				to_return.push result
 
 		to_return
-
-# ## Transactions
-# ### Transaction
-# Object to handle transactions.
-class JEFRi.Transaction
-	constructor: (spec, store) ->
-		Object.assign @,
-			attributes: {}
-			store: store
-			entities: if (spec instanceof Array) then spec else (if spec then [spec] else [])
-
-	# ### Prototype
-	# ### encode
-	encode: ->
-		transaction =
-			attributes: @attributes
-			entities: []
-
-		for entity in @entities
-			transaction.entities.push if JEFRi.isEntity(entity) then entity._encode() else entity
-
-		transaction
-
-	# ### toString
-	toString: ->
-		return JSON.stringify @encode()
-
-	# ### get*([store])*
-	# Execute the transaction as a GET request
-	get: (store = @store)->
-		@emit "getting", {}
-
-		store = store || @store
-		store.execute('get', @).then ->
-			resolve @
-
-	# ### persist*([store])*
-	# Execute the transaction as a POST request
-	persist: (store = @store)->
-		@emit "persisting", {}
-		store.execute('persist', @).then (t)=>
-			for entity in t.entities
-				entity.emit "persisted", {}
-			@emit "persisted", {}
-			resolve @
-
-	# ### add*(spec...)*
-	# Add several entities to the transaction
-	add: (spec, force = false)->
-		#Force spec to be an array
-		spec = if Array.isArray spec then spec else [].slice.call(arguments, 0)
-		for s in spec
-			# if not _.isEntity s
-			#	s = @store.settings.runtime.expand s
-			# TODO switch to direct lookup.
-			if yes #|| force ||	_(@entities).indexBy(JEFRi.EntityComparator s) < 0
-				#Hasn't been added yet...
-				@entities.push s
-		return @
-
-	# ### attributes*(attributes)*
-	# Set several attributes on the transaction
-	attributes: (attributes) ->
-		Object.assign @attributes,c attributes
-		@
-
-if window? then window.JEFRi = module.exports

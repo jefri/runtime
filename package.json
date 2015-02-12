@@ -20,7 +20,7 @@
     "lib/",
     "package.json"
   ],
-  "main": "./src/jefri",
+  "main": "./src/index.js",
   "scripts": {
     "test": "./node_modules/.bin/grunt"
   },

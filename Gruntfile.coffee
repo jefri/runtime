@@ -1,14 +1,4 @@
 module.exports = (grunt) ->
-	# butt - Browser Under Test Tools
-	butt = []
-	unless process.env.DEBUG
-		if process.env.BAMBOO
-			butt.push 'PhantomJS'
-		else if process.env.TRAVIS
-			butt.push 'Firefox'
-		else
-			butt.push 'Chrome'
-
 	grunt.initConfig
 		pkg: grunt.file.readJSON 'package.json'
 		meta:
@@ -24,7 +14,7 @@ module.exports = (grunt) ->
 
 		webpack:
 			jefri:
-				entry: './src/Runtime.coffee'
+				entry: './src/browser.js'
 				output:
 					filename: './lib/<%= pkg.name %>.js'
 				resolve:
@@ -53,7 +43,17 @@ module.exports = (grunt) ->
 
 		karma:
 			options:
-				browsers: butt
+				browsers: do ->
+					# butt - Browser Under Test Tools
+					butt = []
+					unless process.env.DEBUG
+						if process.env.BAMBOO
+							butt.push 'PhantomJS'
+						else if process.env.TRAVIS
+							butt.push 'Firefox'
+						else
+							butt.push 'Chrome'
+					butt
 				frameworks: [ 'mocha', 'sinon-chai' ]
 				reporters: [ 'spec', 'junit', 'coverage' ]
 				singleRun: true,
