@@ -372,7 +372,7 @@ pushResult = (entity)->
 	@[type].push(entity)
 
 # #### Runtime Prototype
-JEFRi.Runtime:: = Object.create
+JEFRi.Runtime:: = Object.create Object.assign {}, Eventer,
 	# Reset the runtime's data, maintains context definitions.
 	clear: ->
 		@_instances = {}
