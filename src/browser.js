@@ -1,5 +1,5 @@
 var JEFRi = require('./jefri');
-JEFRi.Runtime = require('./runtime');
+JEFRi.Runtime = require('./Runtime');
 JEFRi.Transaction = require('./transaction');
 
 module.exports = JEFRi;
