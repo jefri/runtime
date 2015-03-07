@@ -72,6 +72,6 @@
   },
   "dependencies": {
     "request": "~2.27.0",
-    "jefri-jiffies": "~0.0.0"
+    "jefri-jiffies": "~0.1.1"
   }
 }
