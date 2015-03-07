@@ -6,3 +6,8 @@ This package is the JEFRi Runtime environment for javascript. Include it as a de
 
 ### [Developer's Guide](https://github.com/DavidSouther/JEFRi/wiki)
 ### ~~[Context Modeler](model.jefri.org)~~ Coming soon!
+
+## Changelog
+
+* **1.2.1** *2014-03-07* Rerelease with new underlying jiffies utils.
+
