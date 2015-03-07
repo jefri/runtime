@@ -18,6 +18,7 @@
   ],
   "files": [
     "lib/",
+    "src/",
     "package.json"
   ],
   "main": "./src/index.js",
