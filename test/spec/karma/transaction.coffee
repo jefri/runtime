@@ -18,3 +18,16 @@ describe "Transaction", ->
 			equal transaction.entities.length, 2, "Has both entities."
 			done()
 		.catch done
+
+	it 'does not clobber transactions', ->
+		transaction = new JEFRi.Transaction({
+			attributes: foo: 'bar'
+			entities: [{
+				_type: "fizz"
+			}, {
+				_type: "bazz"
+			}]
+		})
+
+		transaction.attributes.foo.should.equal 'bar'
+		transaction.entities.length.should.equal 2

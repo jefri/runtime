@@ -6,9 +6,18 @@ JEFRi = require './jefri.coffee'
 class Transaction
 	constructor: (spec, store) ->
 		Object.assign @,
-			attributes: {}
+			attributes: if spec and spec.attributes then spec.attributes else {}
 			store: store
-			entities: if (spec instanceof Array) then spec else (if spec then [spec] else [])
+			entities:
+				if (spec instanceof Array)
+					spec
+				else if spec
+					if spec.entities
+						spec.entities
+					else
+						[spec]
+				else
+					[]
 
 	# ### Prototype
 	# ### encode
