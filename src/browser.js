@@ -5,5 +5,5 @@ JEFRi.Transaction = require('./transaction');
 module.exports = JEFRi;
 
 if(typeof window !== 'undefined' && window !== null){
-	window.JEFRi = module.exports
+	window.JEFRi = module.exports;
 }

@@ -67,7 +67,6 @@ describe "JEFRi", ->
 			done err
 
 	it "exports", (done)->
-		debugger
 		context.should.have.property 'export'
 		stringContext = context.export()
 		stringContext.length.should.be.greaterThan 0

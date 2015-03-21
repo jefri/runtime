@@ -39,10 +39,12 @@
       "type": "MIT"
     }
   ],
+  "browser": {
+    "./src/index.js": "./src/browser.js"
+  },
   "devDependencies": {
     "chai": "^1.10.0",
     "coffee-loader": "^0.7.2",
-    "coffee-script": "^1.9.0",
     "grunt": "~0.4.1",
     "grunt-contrib-clean": "~0.6.0",
     "grunt-contrib-coffee": "~0.12.0",
@@ -72,7 +74,7 @@
     "st": "^0.5.2"
   },
   "dependencies": {
-    "request": "~2.27.0",
+    "coffee-script": "^1.9.1",
     "jefri-jiffies": "~0.1.1"
   }
 }

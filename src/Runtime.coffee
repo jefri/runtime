@@ -9,7 +9,6 @@ jiffies = require('jefri-jiffies')
 
 Eventer = jiffies.Event
 Promise = jiffies.promise
-Request = jiffies.request
 UUID = jiffies.UUID
 lock = jiffies.lock
 
@@ -29,7 +28,7 @@ module.exports = JEFRi.Runtime = (contextUri, options, protos) ->
 		contextUri = ''
 
 	# Prepare a promise for completing context loading.
-	ready = promise: Promise()
+	ready = Promise.defer()
 
 	# Fill in all the privileged properties
 	settings =
@@ -339,29 +338,21 @@ module.exports = JEFRi.Runtime = (contextUri, options, protos) ->
 		definition.Constructor::[method] = fn
 
 	@load = (contextUri, prototypes) ->
-		Request(contextUri)
-		.then (data) ->
-			data = data || "{}"
-			try
-				data = if Object.isString(data) then JSON.parse(data) else data
-				_set_context data, prototypes
-				ready.promise(true)
-			catch e
-				console.error 'Could not load context'
-				console.warn e
-				console.log data
-				ready.promise(false)
+		jiffies.request(contextUri)
+		.then (data)->
+			_set_context JSON.parse(data), prototypes
+			ready.resolve()
 		.catch (e) ->
+			console.error 'Could not load context'
 			console.warn e
 			console.log e.stack
-			ready.promise false, e
-		.done()
+			ready.reject e
 
 	# Prepare the runtime with the given contexts.
 	if (options && options.debug)
 		# The context object was provided by the caller
 		_set_context(options.debug.context, protos)
-		ready.promise(false)
+		ready.reject()
 	if contextUri then @load contextUri, protos
 	@
 
