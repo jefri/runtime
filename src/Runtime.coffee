@@ -58,6 +58,8 @@ module.exports = JEFRi.Runtime = (contextUri, options, protos) ->
 	# A few default property values.
 	_default = (type) ->
 		switch type
+			when "list" then []
+			when "object" then {}
 			when "boolean" then false
 			when "int" or "float" then 0
 			when "string" then ""
@@ -93,8 +95,8 @@ module.exports = JEFRi.Runtime = (contextUri, options, protos) ->
 			# Check for runtime prototype override.
 			proto = proto || {}
 
-			# Set the key generate if not set by proto.
-			proto[definition.key] = proto[definition.key] || UUID.v4()
+			# Set the key, generate if not set by proto.
+			proto[definition.key] or= UUID.v4()
 
 			# Set a bunch of default values, so they're all available.
 			for name, property of definition.properties

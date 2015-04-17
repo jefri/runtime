@@ -8,12 +8,13 @@
 				"attributes": {
 					"primary": "true"}},
 			"name": {
-				"type": "string",
-				"attributes": {}},
+				"type": "string"},
 			"address": {
 				"type": "string",
 				"attributes": {
-					"unique": "true"}}},
+					"unique": "true"}},
+			"nicknames": {
+				"type": "list"}},
 		"relationships": {
 			"authinfo": {
 				"type": "has_a",

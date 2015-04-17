@@ -4,7 +4,6 @@ ok = (v)->
 
 describe "Contexts", ->
 	it "Context", (done)->
-		debugger
 		runtime = new JEFRi.Runtime("http://0.0.0.0:8000/jefri.json")
 		runtime.ready
 		.then ->
