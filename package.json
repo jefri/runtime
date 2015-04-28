@@ -75,6 +75,6 @@
   },
   "dependencies": {
     "coffee-script": "^1.9.1",
-    "jefri-jiffies": "~0.1.1"
+    "jefri-jiffies": "~0.1.2"
   }
 }
