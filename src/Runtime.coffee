@@ -235,74 +235,87 @@ module.exports = JEFRi.Runtime = (contextUri, options, protos) ->
 				return @_fields[field]
 
 	# Attach the mutators and accessors (mutaccs) to the prototype.
-	#/* TODO Thoroughly debug these functions... */
 	_build_relationship = (definition, field, relationship) ->
+		# Generate an accessor for a has_one relationship type.
+		# This accessor will return a single instance of the remote reference,
+		# and will follow appropriate back references.
+		#
+		# The local entity should have some string property whose value will match
+		# the remote entity's key property.
+		_has_one = ->
+			set: lock (related) ->
+				if related is null # Actually a "Remove"
+					if "is_a" isnt relationship.type
+						try
+							@_relationships[field]?[relationship.back].remove @
+						catch
+							@_relationships[field]?[relationship.back] = null
+					@_relationships[field] = null
+					@[relationship.property] = null
+				else # A set
+					@_relationships[field] = related
+					resolve_ids.call @, related
+					if "is_a" isnt relationship.type
+						if relationship.back then related?[relationship.back] = @
+				# Notify observers
+				@_modified._count += 1
+				@emit "modified", [field, related]
+				@
+
+			get: ->
+				if @_relationships[field] is undefined
+					# Just need the one...
+					@_relationships[field] = ec._instances[relationship.to.type][@[relationship.property]]
+					# Make sure we found one
+					if @_relationships[field] is undefined
+						# If not, create it.
+						key = {}
+						key[relationship.to.property] = @[relationship.property]
+						@[field] = ec.build(relationship.to.type, key)
+
+				return @_relationships[field]
+
+		# Generate an accessor for a many to one relationship, where a single
+		# remote entity's property matches the local entitie's key.
+		_has_many = ->
+			enumerable: true
+			configurable: false
+			# Return the set of entities in the relationship.
+			get: ->
+				# Check if the field has ever been set
+				if not (field of @_relationships)
+					# The field hasn't been set, so we haven't ever gotten this relationship before.
+					@_relationships[field] = new EntityArray @, field, relationship
+					# We'll need to go through and fix that.
+					# We'll need to grab everything who points to us...
+					# Loop over every entity this relationship could point to
+					for id, type of ec._instances[relationship.to.type]
+						# If these are related
+						if type[relationship.to.property] is @[relationship.property]
+							# Add it
+							@_relationships[field].add type
+				@_relationships[field]
+
+			# Add an entity to the relationship.
+			set: (relations...) ->
+				relations = relations.reduce(((a, b)->a.concat(b)), [])
+				# Lazy load
+				@[field]
+				for entity in relations
+					#There is not a local reference to the found entity.
+					@_relationships[field].add entity
+
+				@_modified._count += 1
+				# Notify observers
+				@emit "modified", [field, arguments]
+				@
+
 		access =
 			# The multiple relations functions.
 			if "has_many" is relationship.type
-				enumerable: true
-				configurable: false
-				# Return the set of entities in the relationship.
-				get: ->
-					# Check if the field has ever been set
-					if not (field of @_relationships)
-						# The field hasn't been set, so we haven't ever gotten this relationship before.
-						@_relationships[field] = new EntityArray @, field, relationship
-						# We'll need to go through and fix that.
-						# We'll need to grab everything who points to us...
-						# Loop over every entity this relationship could point to
-						for id, type of ec._instances[relationship.to.type]
-							# If these are related
-							if type[relationship.to.property] is @[relationship.property]
-								# Add it
-								@_relationships[field].add type
-					@_relationships[field]
-
-				# Add an entity to the relationship.
-				set: (relations...) ->
-					relations = relations.reduce(((a, b)->a.concat(b)), [])
-					# Lazy load
-					@[field]
-					for entity in relations
-						#There is not a local reference to the found entity.
-						@_relationships[field].add entity
-
-					@_modified._count += 1
-					# Notify observers
-					@emit "modified", [field, arguments]
-					@
+				_has_many()
 			else
-				set: lock (related) ->
-					if related is null # Actually a "Remove"
-						if "is_a" isnt relationship.type
-							try
-								@_relationships[field]?[relationship.back].remove @
-							catch
-								@_relationships[field]?[relationship.back] = null
-						@_relationships[field] = null
-						@[relationship.property] = null
-					else # A set
-						@_relationships[field] = related
-						resolve_ids.call @, related
-						if "is_a" isnt relationship.type
-							if relationship.back then related?[relationship.back] = @
-					# Notify observers
-					@_modified._count += 1
-					@emit "modified", [field, related]
-					@
-
-				get: ->
-					if @_relationships[field] is undefined
-						# Just need the one...
-						@_relationships[field] = ec._instances[relationship.to.type][@[relationship.property]]
-						# Make sure we found one
-						if @_relationships[field] is undefined
-							# If not, create it.
-							key = {}
-							key[relationship.to.property] = @[relationship.property]
-							@[field] = ec.build(relationship.to.type, key)
-
-					return @_relationships[field]
+				_has_one()
 
 		Object.defineProperty definition.Constructor::, field, access
 
