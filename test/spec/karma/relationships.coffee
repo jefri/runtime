@@ -177,3 +177,49 @@ describe "JEFRi Relationships", ->
 		equal bar.foo.length, 0, "bar has no foo"
 
 		done()
+
+	it.skip "has_list", (done)->
+		"Testing has_list relationships."
+		runtime = new JEFRi.Runtime "",
+			debug:
+				context:
+					entities:
+						Foo:
+							key: "foo_id"
+							properties:
+								foo_id:
+									type: "string"
+								foo_ids:
+									type: "list"
+							relationships:
+								bars:
+									type: "has_many"
+									to:
+										type: "Bar"
+										property: "bar_id"
+						Bar:
+							key: "bar_id"
+							properties:
+								bar_id:
+									type: "string"
+
+		foo = runtime.build("Foo")
+
+		bars = [
+			runtime.build("Bar"),
+			runtime.build("Bar"),
+			runtime.build("Bar")
+		]
+		foo.bars = bars
+		foo.bars.add runtime.build("Bar")
+		ok foo.bars.length, 4
+
+		transaction = new JEFRi.Transaction()
+		transaction.add foo
+		result = transaction.encode()
+		equal result.entities[0].bars.length, 4, "Has all entities."
+
+		foo2 = runtime.expand(result)[0]
+		foo2.bars.forEach (e)-> JEFRi.isEntity(e).should.equal true
+
+		done()
