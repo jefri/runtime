@@ -310,10 +310,47 @@ module.exports = JEFRi.Runtime = (contextUri, options, protos) ->
 				@emit "modified", [field, arguments]
 				@
 
+		_has_many_list = ->
+			enumerable: true
+			configurable: false
+			# Return the set of entities in the relationship.
+			get: ->
+				# Check if the field has ever been set
+				if not (field of @_relationships)
+					# The field hasn't been set, so we haven't ever gotten this relationship before.
+					@_relationships[field] = new EntityArray @, field, relationship
+					@[relationship.property].forEach (id)->
+						@_relationships[field].add ec._instances[relationship.to.type][id]
+					a = @ # Too lazy to .bind
+					@_relationships[field].on EntityArray.ADD, (e)->
+						a[relationship.property].push e.id()
+					@_relationships[field].on EntityArray.REMOVE, (e)->
+						i = a[relationship.property].indexOf e.id
+						a[relationship.property].splice i, 1
+
+				@_relationships[field]
+
+			# Add an entity to the relationship.
+			set: (relations...) ->
+				relations = relations.reduce(((a, b)->a.concat(b)), [])
+				# Lazy load
+				@[field]
+				for entity in relations
+					#There is not a local reference to the found entity.
+					@_relationships[field].add entity
+				@[relationship.property] = @_relationships[field].map (_)-> _.id()
+				@_modified._count += 1
+				# Notify observers
+				@emit "modified", [field, arguments]
+				@
+
 		access =
 			# The multiple relations functions.
 			if "has_many" is relationship.type
-				_has_many()
+				if "list" is definition.properties[relationship.property]?.type
+					_has_many_list()
+				else
+					_has_many()
 			else
 				_has_one()
 

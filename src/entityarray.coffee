@@ -1,7 +1,15 @@
+jiffies = require('jefri-jiffies')
+Eventer = jiffies.Event
 JEFRi = require './jefri.coffee'
 
 module.exports = EntityArray = (@entity, @field, @relationship)->
+EntityArray.ADD = 'Add'
+EntityArray.REMOVE = 'Remove'
 EntityArray:: = Object.create Array::
+# Make Eventer, because Array:: doe not assign.
+Object.keys(Eventer::).forEach (key)->
+	EntityArray::[key] = Eventer::[key]
+
 EntityArray::remove = (entity)->
 	return if entity is null
 	i = @length - 1
@@ -15,6 +23,7 @@ EntityArray::remove = (entity)->
 					e[@relationship.back] = null
 			@splice i, 1
 		i--
+	@emit EntityArray.REMOVE, entity
 	@
 
 EntityArray::add = (entity)->
@@ -28,4 +37,5 @@ EntityArray::add = (entity)->
 
 		#Call the reverse setter
 		entity[@relationship.back] = @entity if @relationship.back
+	@emit EntityArray.ADD, entity
 	@entity

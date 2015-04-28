@@ -178,7 +178,7 @@ describe "JEFRi Relationships", ->
 
 		done()
 
-	it.skip "has_list", (done)->
+	it "has_list", (done)->
 		"Testing has_list relationships."
 		runtime = new JEFRi.Runtime "",
 			debug:
@@ -189,11 +189,12 @@ describe "JEFRi Relationships", ->
 							properties:
 								foo_id:
 									type: "string"
-								foo_ids:
+								bar_ids:
 									type: "list"
 							relationships:
 								bars:
 									type: "has_many"
+									property: "bar_ids"
 									to:
 										type: "Bar"
 										property: "bar_id"
@@ -212,12 +213,13 @@ describe "JEFRi Relationships", ->
 		]
 		foo.bars = bars
 		foo.bars.add runtime.build("Bar")
-		ok foo.bars.length, 4
+		ok foo.bars.length, 4, 'Entity was added.'
+		ok foo.bar_ids.length, 4, 'Has all IDs.'
 
 		transaction = new JEFRi.Transaction()
 		transaction.add foo
 		result = transaction.encode()
-		equal result.entities[0].bars.length, 4, "Has all entities."
+		equal result.entities[0].bar_ids.length, 4, "Has all entities."
 
 		foo2 = runtime.expand(result)[0]
 		foo2.bars.forEach (e)-> JEFRi.isEntity(e).should.equal true
