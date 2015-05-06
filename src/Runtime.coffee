@@ -316,12 +316,13 @@ module.exports = JEFRi.Runtime = (contextUri, options, protos) ->
 			# Return the set of entities in the relationship.
 			get: ->
 				# Check if the field has ever been set
+				@[relationship.property] or= []
 				if not (field of @_relationships)
+					a = @ # Too lazy to .bind
 					# The field hasn't been set, so we haven't ever gotten this relationship before.
 					@_relationships[field] = new EntityArray @, field, relationship
 					@[relationship.property].forEach (id)->
-						@_relationships[field].add ec._instances[relationship.to.type][id]
-					a = @ # Too lazy to .bind
+						a._relationships[field].add ec._instances[relationship.to.type][id]
 					@_relationships[field].on EntityArray.ADD, (e)->
 						a[relationship.property].push e.id()
 					@_relationships[field].on EntityArray.REMOVE, (e)->
@@ -508,10 +509,11 @@ JEFRi.Runtime:: = Object.create Object.assign {}, Eventer,
 		r = @definition(spec._type)
 		results = @_instances[spec._type]
 
-		if spec.hasOwnProperty r.key || spec.hasOwnProperty '_id'
+		if spec.hasOwnProperty(r.key) or spec.hasOwnProperty('_id')
 			# If a key is set, return only that result.
-			if (results[spec[r.key]])
-				to_return.push(results[spec[r.key]])
+			key = spec[r.key] or spec._id
+			if results[key]
+				to_return.push(results[key])
 		else
 			# Add results to an array to clean up the return for the user.
 			for key, result of results

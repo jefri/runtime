@@ -104,3 +104,28 @@ describe "JEFRi Runtime", ->
 			badType.should.throw checkBadTypeException, "Create bad type generates exception."
 			done()
 		.catch done
+
+	it 'finds on spec', (done)->
+		runtime = new JEFRi.Runtime "http://localhost:8000/user.json",
+			storeURI: "/test/"
+
+		runtime.ready
+		.then ->
+			user = runtime.build "User",
+				name: "southerd"
+				address: "davidsouther@gmail.com"
+			user.authinfo = runtime.build "Authinfo", {}
+			user2 = runtime.build "User",
+				name: "portaj"
+				address: "rurd4me@example.com"
+
+			debugger
+			users = runtime.find
+				_type: 'User'
+				_id: user.id()
+
+			users.length.should.equal 1
+			users[0].id().should.equal user.id()
+
+			done()
+		.catch done
