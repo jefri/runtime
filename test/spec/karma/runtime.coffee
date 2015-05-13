@@ -119,7 +119,6 @@ describe "JEFRi Runtime", ->
 				name: "portaj"
 				address: "rurd4me@example.com"
 
-			debugger
 			users = runtime.find
 				_type: 'User'
 				_id: user.id()
