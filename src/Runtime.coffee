@@ -74,6 +74,7 @@ module.exports = JEFRi.Runtime = (contextUri, options, protos) ->
 		# Prepare each entity. Uses _.each to put (definition, type) in a closure.
 		# _.each context.entities, (definition, type) => # NO SERIOUSLY, definition MUST BE IN A CLOSURE!
 		for type, definition of context.entities
+			definition.type = type
 			_build_constructor definition, type
 
 	_build_constructor = (definition, type) =>
